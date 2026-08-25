@@ -1,0 +1,88 @@
+with raw_orders as (
+    select * from {{ source('hostfully_api', 'raw_orders') }}
+),
+
+unnested_fees as (
+    select 
+        uid as order_id,
+        'CLEANING' as fee_category,
+        cast(json_value(fees, '$.cleaningFee.grossAmount') as numeric) as amount
+    from raw_orders
+    
+    union all
+    
+    select 
+        uid as order_id,
+        case 
+            when lower(json_value(item, '$.name')) like '%clean%' 
+                 or json_value(item, '$.name') in ('Housekeeping fee', 'رسوم التنظيف', 'رسوم تنظيف') then 'CLEANING'
+            when lower(json_value(item, '$.name')) like '%airbnb host service%' 
+                 or json_value(item, '$.name') = 'Airbnb Host Service Fee' then 'AIRBNB_SERVICE'
+            when lower(json_value(item, '$.name')) like '%service%' 
+                 or lower(json_value(item, '$.name')) like '%serv%'
+                 or json_value(item, '$.name') = 'رسوم الخدمة' then 'SERVICE'
+            when lower(json_value(item, '$.name')) like '%pet%' then 'PET'
+            when lower(json_value(item, '$.name')) like '%management%' then 'MANAGEMENT'
+            else 'OTHER'
+        end as fee_category,
+        cast(json_value(item, '$.grossAmount') as numeric) as amount
+    from raw_orders,
+    unnest(json_query_array(fees, '$.otherFees')) as item
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY uid, json_value(item, '$.name') 
+        ORDER BY 
+          CASE 
+            WHEN json_value(item, '$.isEditable') = 'false' AND SAFE_CAST(json_value(item, '$.grossAmount') AS FLOAT64) > 0 THEN 1
+            WHEN json_value(item, '$.isEditable') = 'true' AND SAFE_CAST(json_value(item, '$.grossAmount') AS FLOAT64) > 0 THEN 2
+            WHEN json_value(item, '$.isEditable') = 'false' THEN 3
+            ELSE 4
+          END ASC
+      ) = 1
+),
+
+fee_totals as (
+    select 
+        order_id,
+        sum(case when fee_category = 'CLEANING' then amount else 0 end) as total_cleaning_fee,
+        sum(case when fee_category = 'SERVICE' then amount else 0 end) as total_service_fee,
+        sum(case when fee_category = 'AIRBNB_SERVICE' then amount else 0 end) as airbnb_service_fee,
+        sum(case when fee_category = 'PET' then amount else 0 end) as total_pet_fee,
+        sum(case when fee_category = 'MANAGEMENT' then amount else 0 end) as total_management_fee,
+        sum(case when fee_category = 'OTHER' then amount else 0 end) as total_other_fees,
+        sum(amount) as total_fees_amount
+    from unnested_fees
+    group by 1
+),
+
+renamed as (
+    select
+        o.uid as order_id,
+        o.lead_uid as lead_id,
+        o.external_order_id as external_order_id,
+        array_length(json_query_array(o.rent, '$.rentBreakdowns')) as total_nights,
+        o.currency,
+        cast(o.total_amount as numeric) as total_amount,
+        cast(o.total_taxes_amount as numeric) as total_taxes_amount,
+        cast(o.security_deposit as numeric) as security_deposit_amount,
+        coalesce(f.total_cleaning_fee, 0) as total_cleaning_fee,
+        coalesce(f.total_service_fee, 0) as total_service_fee,
+        coalesce(f.airbnb_service_fee, 0) as airbnb_service_fee,
+        coalesce(f.total_pet_fee, 0) as total_pet_fee,
+        coalesce(f.total_management_fee, 0) as total_management_fee,
+        coalesce(f.total_other_fees, 0) as total_other_fees,
+        coalesce(f.total_fees_amount, 0) as total_fees_amount,
+        cast(json_value(o.rent, '$.grossPrice') as numeric) as rent_gross_amount,
+        cast(json_value(o.rent, '$.netPrice') as numeric) as rent_net_amount,
+        cast(json_value(o.rent, '$.listPrice') as numeric) as rent_list_price,
+        cast(json_value(o.rent, '$.discount') as numeric) as rent_discount,
+        cast(json_value(o.rent, '$.extraGuestsNetPrice') as numeric) as rent_extra_guests_net_price,
+        cast(json_value(o.rent, '$.rentNetPrice') as numeric) as rent_net_price_only,
+        cast(json_value(o.rent, '$.taxAmount') as numeric) as rent_tax_amount,
+        cast(json_value(o.rent, '$.taxationRate') as numeric) as rent_taxation_rate,
+        safe_cast(o.creation_utc_date_time as timestamp) as created_at_utc,
+        safe_cast(o.updated_utc_date_time as timestamp) as updated_at_utc
+    from raw_orders o
+    left join fee_totals f on o.uid = f.order_id
+)
+
+select * from renamed

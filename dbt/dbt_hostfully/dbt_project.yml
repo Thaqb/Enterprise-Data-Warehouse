@@ -1,0 +1,67 @@
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'hostfully'
+version: '1.0.0'
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'hostfully'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+# Models are organized by dlt pipeline refresh cadence for Airflow orchestration
+models:
+  hostfully:
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ["staging"]
+      
+      # HOURLY PIPELINE - Leads, Messages, Orders, Transactions
+      # Tables: raw_leads, raw_messages, raw_orders, raw_transactions
+      # Schedule: Every hour for real-time booking data
+      hourly_pipeline:
+        +tags: ["hourly", "leads_pipeline"]
+      
+      # BIWEEKLY PIPELINE - Agency, Employees, Owners, Promo Codes
+      # Tables: raw_agency, raw_employees, raw_owners, raw_promo_codes
+      # Schedule: Every 2 weeks for organizational data
+      biweekly_pipeline:
+        +tags: ["biweekly", "employees_pipeline"]
+      
+      # DAILY PIPELINE - Properties and all property-related tables
+      # Tables: raw_properties, raw_property_*, raw_booking_dot_com_status, raw_property_reviews_*
+      # Schedule: Daily at 7 AM UTC
+      daily_pipeline:
+        +tags: ["daily", "properties_pipeline"]
+      
+    marts:
+      +materialized: table
+      +schema: marts
+      +tags: ["marts"]
+
+# Snapshot configuration
+snapshots:
+  hostfully:
+    +target_schema: snapshots
+    +strategy: timestamp
+    +unique_key: id
+
+flags:
+  require_generic_test_arguments_property: true

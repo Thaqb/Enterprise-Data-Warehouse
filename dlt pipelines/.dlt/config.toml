@@ -1,0 +1,31 @@
+base_url="https://api.hostfully.com/api/v3.2/"
+# Environment configuration: DEV (local DuckDB) or PROD (BigQuery)
+# Set to PROD for production deployment to BigQuery
+# Set to DEV for local development with DuckDB
+[environment]
+mode = "PROD"
+table_prefix="raw_"
+# Configure parallel execution for messages resource
+# Testing with 25 workers to observe performance difference
+[extract]
+workers=25
+max_parallel_items=20
+
+[runtime]
+log_level="WARNING"  # the system log level of dlt
+# use the dlthub_telemetry setting to enable/disable anonymous usage data reporting, see https://dlthub.com/docs/reference/telemetry
+dlthub_telemetry = false
+
+# Hostfully-specific runtime configuration
+[hostfully]
+base_url="https://api.hostfully.com/api/v3.2/"
+agency_uid="3b129cfe-79ea-4c7a-b173-d145a0a11d3e"
+# Number of concurrent worker threads used by enrichment/message parallel fetchers
+max_workers = 25
+# Number of lead UIDs to fetch per transformer task (batching reduces scheduling overhead)
+batch_size = 5
+
+# Initial backfill window to run once (used when there is no per-property last-synced date)
+property_calendar_backfill_from = "2023-01-01"
+property_calendar_backfill_to = "2025-12-31"
+

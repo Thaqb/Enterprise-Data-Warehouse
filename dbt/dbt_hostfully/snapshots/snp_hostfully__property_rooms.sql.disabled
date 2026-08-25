@@ -1,0 +1,15 @@
+{% snapshot snp_hostfully__property_rooms %}
+
+{{
+    config(
+      target_database='cloud-data-pipeline-projects',
+      target_schema='snapshots',
+      unique_key='room_id',
+      strategy='timestamp',
+      updated_at='updated_at_utc',
+    )
+}}
+
+select * from {{ ref('stg_hostfully__property_rooms') }}
+
+{% endsnapshot %}
