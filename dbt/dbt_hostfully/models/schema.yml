@@ -1,0 +1,1159 @@
+version: 2
+
+# ============================================================================
+# STAGING LAYER - Data Quality & Referential Integrity Tests
+# ============================================================================
+
+models:
+  # ---- CORE ENTITIES ----
+
+  - name: stg_hostfully__agencies
+    description: "Staging table for agency profiles and configuration data. Core entity containing agency details, contact information, and financial settings."
+    columns:
+      - name: agency_id
+        description: "Unique identifier for the agency"
+        tests:
+          - unique
+          - not_null
+      - name: agency_name
+        description: "Official name of the agency"
+        tests:
+          - not_null
+      - name: email
+        description: "Primary contact email address"
+      - name: phone_number
+        description: "Contact phone number"
+      - name: base_currency
+        description: "Default currency for pricing and transactions"
+        tests:
+          - not_null
+      - name: city
+        description: "City where agency is located"
+      - name: state
+        description: "State or region"
+      - name: country_code
+        description: "ISO country code"
+
+  - name: stg_hostfully__properties
+    description: "Staging table for property listings and attributes. Contains all property details including location, physical characteristics, and operational settings."
+    columns:
+      - name: property_id
+        description: "Unique identifier for the property"
+        tests:
+          - unique
+          - not_null
+      - name: agency_id
+        description: "Foreign key to the agency managing this property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__agencies')
+                field: agency_id
+      - name: internal_property_name
+        description: "Internal name/reference for the property"
+        tests:
+          - not_null
+      - name: property_type
+        description: "Type of property (e.g., apartment, house, villa)"
+        tests:
+          - not_null
+      - name: is_active
+        description: "Whether property is actively managed"
+      - name: size_sqm
+        description: "Property size in square meters"
+      - name: bedrooms_count
+        description: "Number of bedrooms"
+      - name: beds_count
+        description: "Total number of beds"
+      - name: bathrooms_count
+        description: "Number of bathrooms"
+      - name: city
+        description: "City where property is located"
+      - name: country_code
+        description: "Country code of property location"
+      - name: latitude
+        description: "Geographic latitude coordinate"
+      - name: longitude
+        description: "Geographic longitude coordinate"
+      - name: base_daily_rate
+        description: "Standard daily rate for the property"
+      - name: currency
+        description: "Currency for daily rate"
+      - name: max_guests
+        description: "Maximum number of guests allowed"
+      - name: minimum_stay_nights
+        description: "Minimum stay requirement in nights"
+      - name: check_in_time
+        description: "Standard check-in time"
+      - name: check_out_time
+        description: "Standard check-out time"
+      - name: updated_at_utc
+        description: "Last update timestamp in UTC"
+
+  - name: stg_hostfully__owners
+    description: "Staging table for property owners. Contains owner profile and contact information."
+    columns:
+      - name: owner_id
+        description: "Unique identifier for the owner"
+        tests:
+          - unique
+          - not_null
+      - name: owner_first_name
+        description: "Owner's first name"
+      - name: owner_last_name
+        description: "Owner's last name"
+      - name: owner_email
+        description: "Owner's email address"
+      - name: owner_phone_number
+        description: "Owner's phone number"
+
+  - name: stg_hostfully__employees
+    description: "Staging table for team members and staff. Contains employee details and agency assignments."
+    columns:
+      - name: employee_id
+        description: "Unique identifier for the employee"
+        tests:
+          - unique
+          - not_null
+      - name: agency_id
+        description: "Foreign key to the agency"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__agencies')
+                field: agency_id
+      - name: employee_first_name
+        description: "Employee's first name"
+      - name: employee_last_name
+        description: "Employee's last name"
+      - name: employee_email
+        description: "Employee's email address"
+
+  # ---- PROPERTY RELATIONSHIPS ----
+
+  - name: stg_hostfully__property_owners
+    description: "Junction table linking properties to owners. Represents ownership relationships between properties and owners."
+    columns:
+      - name: property_owner_link_id
+        description: "Unique identifier for this property-owner link"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: owner_id
+        description: "Foreign key to owner (can be null when owner JSON is null)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__owners')
+                field: owner_id
+
+  - name: stg_hostfully__property_amenities
+    description: "Staging table for property amenities and features. Lists all amenities available at each property."
+    columns:
+      - name: property_amenity_id
+        description: "Unique identifier for the property-amenity link"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: amenity
+        description: "Name of the amenity"
+      - name: category
+        description: "Category of the amenity"
+      - name: description
+        description: "Description of the amenity"
+
+  - name: stg_hostfully__property_channel_links
+    description: "Staging table for OTA (Online Travel Agency) channel mappings. Links properties to their listings on external platforms."
+    columns:
+      - name: channel_link_id
+        description: "Unique identifier for the channel link"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: channel_name
+        description: "Name of the OTA channel (e.g., Airbnb, Booking.com)"
+      - name: external_property_id
+        description: "Property ID on the external channel"
+
+  - name: stg_hostfully__property_descriptions
+    description: "Staging table for property descriptions and marketing copy. Contains textual descriptions of properties."
+    columns:
+      - name: property_description_id
+        description: "Unique identifier"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: description_text
+        description: "Property description content"
+
+  - name: stg_hostfully__property_rules
+    description: "Staging table for property rules and house rules. Contains restrictions and channel applicability."
+    columns:
+      - name: property_rule_id
+        description: "Unique identifier combining property and rule"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: rule_name
+        description: "Name of the rule (e.g., ALLOWS_SMOKING, ALLOWS_PETS)"
+      - name: is_airbnb_applicable
+        description: "Whether rule applies to Airbnb"
+      - name: is_booking_dot_com_applicable
+        description: "Whether rule applies to Booking.com"
+      - name: is_google_applicable
+        description: "Whether rule applies to Google"
+
+  - name: stg_hostfully__property_calendar
+    description: "Staging table for property availability calendar. Uses incremental loading to track daily availability, pricing, and booking status."
+    columns:
+      - name: property_calendar_id
+        description: "Unique identifier combining property and date"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: calendar_date
+        description: "Date for this calendar entry"
+        tests:
+          - not_null
+      - name: price_amount
+        description: "Price for this date"
+      - name: is_unavailable
+        description: "Whether the date is unavailable"
+      - name: min_stay_length
+        description: "Minimum stay requirement for this date"
+      - name: max_stay_length
+        description: "Maximum stay allowed for this date"
+
+  # ---- BOOKING & TRANSACTION FLOW ----
+
+  - name: stg_hostfully__leads
+    description: "Staging table for booking inquiries and leads. Contains guest information and lead tracking through the sales funnel."
+    columns:
+      - name: lead_id
+        description: "Unique identifier for the lead"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+      - name: agency_id
+        description: "Foreign key to agency"
+        tests:
+          - not_null
+      - name: lead_type
+        description: "Type of lead (e.g., INQUIRY, BOOKING)"
+      - name: lead_current_status
+        description: "Current status of lead in sales funnel"
+      - name: lead_source
+        description: "Source of the lead (e.g., Direct, Airbnb, Booking.com)"
+      - name: guest_first_name
+        description: "Guest's first name (cleaned)"
+      - name: guest_last_name
+        description: "Guest's last name (cleaned)"
+      - name: guest_email
+        description: "Guest's email address"
+      - name: guest_phone_number
+        description: "Guest's phone number"
+      - name: guest_adult_count
+        description: "Number of adult guests"
+      - name: guest_children_count
+        description: "Number of children"
+      - name: guest_infant_count
+        description: "Number of infants"
+      - name: guest_pet_count
+        description: "Number of pets"
+      - name: guest_id
+        description: "Unique guest identifier"
+      - name: check_in_date
+        description: "Intended check-in date"
+      - name: check_out_date
+        description: "Intended check-out date"
+      - name: external_booking_id
+        description: "External booking reference ID"
+      - name: booked_at_utc
+        description: "When the booking was made"
+      - name: lead_created_at_utc
+        description: "When the lead was created"
+      - name: lead_updated_at_utc
+        description: "When the lead was last updated"
+
+  - name: stg_hostfully__orders
+    description: "Staging table for confirmed bookings and orders. Contains booking details, financial breakdown, and stay metrics."
+    columns:
+      - name: order_id
+        description: "Unique identifier for the order"
+        tests:
+          - unique
+          - not_null
+      - name: lead_id
+        description: "Foreign key to the lead"
+        tests:
+          - not_null
+      - name: total_nights
+        description: "Number of nights for the stay"
+      - name: currency
+        description: "Currency for financial amounts"
+      - name: rent_gross_amount
+        description: "Gross rent before commission"
+      - name: rent_net_amount
+        description: "Net rent after commission"
+      - name: total_rent_amount
+        description: "Total accommodation charges"
+      - name: total_cleaning_fee
+        description: "Total cleaning fee charged"
+      - name: total_service_fee
+        description: "Total service fee charged"
+      - name: total_pet_fee
+        description: "Total pet fee charged"
+      - name: total_management_fee
+        description: "Total management fee charged"
+      - name: total_other_fees
+        description: "Total other miscellaneous fees"
+      - name: total_fees_amount
+        description: "Total of all fees and charges"
+      - name: total_amount
+        description: "Grand total amount for the booking"
+      - name: total_taxes_amount
+        description: "Total taxes on the booking"
+      - name: order_status
+        description: "Current status of the order"
+      - name: created_at_utc
+        description: "When the order was created"
+      - name: updated_at_utc
+        description: "When the order was last updated"
+
+  - name: stg_hostfully__transactions
+    description: "Staging table for financial transactions. Records all payments, refunds, and financial adjustments related to orders."
+    columns:
+      - name: transaction_id
+        description: "Unique identifier for the transaction"
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: "Foreign key to order"
+        tests:
+          - not_null
+      - name: transaction_type
+        description: "Type of transaction (PAYMENT, REFUND, ADJUSTMENT)"
+      - name: transaction_status
+        description: "Status of the transaction (SUCCESS, FAILED, PENDING)"
+      - name: transaction_amount
+        description: "Amount of the transaction"
+      - name: is_manual_transaction
+        description: "Whether this was manually created"
+      - name: created_at_utc
+        description: "When the transaction was recorded"
+
+  # ---- COMMUNICATION & ENGAGEMENT ----
+
+  - name: stg_hostfully__threads
+    description: "Staging table for communication threads. Represents conversation threads between guests and property managers, derived from message-level data in the Hostfully API. Grain: one row per (thread_id, lead_id) combination."
+    columns:
+      - name: thread_sk
+        description: "Surrogate key (dbt-generated hash). Primary key for this table."
+        tests:
+          - unique
+          - not_null
+      - name: thread_id
+        description: "Unique identifier for the thread (threadUid from raw_messages). Part of business composite key."
+        tests:
+          - not_null
+      - name: lead_id
+        description: "Associated lead for this thread (leadUid from raw_messages). Part of business composite key."
+        tests:
+          - not_null
+      - name: extracted_email
+        description: "Email address extracted from thread messages (regex pattern match)"
+      - name: created_at_utc
+        description: "Timestamp of the first message in this thread-lead combination"
+        tests:
+          - not_null
+      - name: last_updated_at_utc
+        description: "Timestamp of the most recent message in this thread-lead combination"
+        tests:
+          - not_null
+      - name: message_count
+        description: "Count of messages in this thread-lead combination"
+
+  - name: stg_hostfully__messages
+    description: "Staging table for individual messages. Contains all messages within threads. Grain: one row per (message_id, thread_id, lead_id) combination. Uses surrogate key (message_sk) to handle potential exact duplicates."
+    columns:
+      - name: message_sk
+        description: "Surrogate key (dbt-generated hash). Primary key for this table. Handles exact duplicates."
+        tests:
+          - unique
+          - not_null
+      - name: message_id
+        description: "Unique identifier for the message (uid from raw_messages). Part of business composite key."
+        tests:
+          - not_null
+      - name: thread_id
+        description: "Thread identifier (threadUid from raw_messages). Part of business composite key."
+        tests:
+          - not_null
+      - name: lead_id
+        description: "Lead identifier (leadUid from raw_messages). Part of business composite key."
+        tests:
+          - not_null
+      - name: message_channel
+        description: "Message channel type (e.g., AIRBNB, BOOKING_COM)"
+      - name: message_status
+        description: "Message status (SENT, CREATED, FAILED, etc.)"
+      - name: sender_type
+        description: "Type of sender (AGENCY, GUEST, etc.)"
+      - name: message_subject
+        description: "Subject line of the message"
+      - name: message_text
+        description: "Text content of the message"
+      - name: attachment_url
+        description: "URL of attached file if any"
+      - name: created_at_utc
+        description: "When the message was sent"
+        tests:
+          - not_null
+
+  # ---- PROMOTIONAL & PRICING ----
+
+  - name: stg_hostfully__promo_codes
+    description: "Staging table for discount and promotional codes. Contains promo code details and validity rules."
+    columns:
+      - name: promo_code_id
+        description: "Unique identifier for the promo code"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property (or 'All' for agency-wide)"
+      - name: agency_id
+        description: "Foreign key to agency"
+      - name: promo_code
+        description: "The actual promo code string"
+        tests:
+          - not_null
+      - name: discount_type
+        description: "Type of discount (PERCENTAGE or AMOUNT)"
+      - name: discount_value
+        description: "Amount or percentage of discount"
+      - name: is_single_usage
+        description: "Whether code can only be used once"
+      - name: valid_from_utc
+        description: "Start date of validity in UTC"
+      - name: valid_to_utc
+        description: "End date of validity in UTC"
+
+  # ---- EXTERNAL INTEGRATIONS ----
+
+  - name: stg_hostfully__airbnb_data
+    description: "Staging table for Airbnb-specific data. Contains Airbnb listing metrics and channel-specific information. Note: Properties not linked to Airbnb are excluded."
+    columns:
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: airbnb_listing_id
+        description: "Airbnb's external listing ID"
+      - name: airbnb_reviews_count
+        description: "Number of reviews on Airbnb"
+      - name: airbnb_average_rating
+        description: "Average guest rating on Airbnb"
+
+  - name: stg_hostfully__booking_dot_com_status
+    description: "Staging table for Booking.com property status. Contains status information for properties on Booking.com channel."
+    columns:
+      - name: property_uid
+        description: "Property unique identifier (foreign key to properties)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: booking_dot_com_status
+        description: "Current status on Booking.com (e.g., Open / bookable, Auto closed)"
+
+  - name: stg_hostfully__property_booking_dot_com_settings
+    description: "Staging table for Booking.com property settings. Contains Booking.com-specific configuration for properties."
+    columns:
+      - name: property_uid
+        description: "Property unique identifier (foreign key to properties)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: booking_dot_com_hotel_id
+        description: "Booking.com hotel identifier"
+      - name: booking_dot_com_room_id
+        description: "Booking.com room identifier"
+      - name: room_type
+        description: "Type of room (e.g., Villa, Apartment)"
+      - name: room_name
+        description: "Name of the room/unit on Booking.com"
+      - name: booking_type
+        description: "Booking type (INSTANT_BOOKING or BOOKING_REQUEST)"
+
+  - name: stg_hostfully__property_reviews_booking
+    description: "Staging table for Booking.com guest reviews. Contains guest review data from Booking.com channel."
+    columns:
+      - name: review_id
+        description: "Unique identifier for the review"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: review_score_value
+        description: "Overall review score value"
+      - name: content_score_value
+        description: "Content quality score value"
+      - name: quality_rating_score_value
+        description: "Quality rating score value"
+      - name: max_score
+        description: "Maximum possible score (typically 100)"
+
+  - name: stg_hostfully__property_reviews_airbnb
+    description: "Staging table for Airbnb guest reviews. Contains guest review data from Airbnb channel."
+    columns:
+      - name: review_id
+        description: "Unique identifier for the review"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hostfully__properties')
+                field: property_id
+      - name: rating
+        description: "Guest's rating score"
+      - name: review_text
+        description: "Guest's review comment"
+      - name: created_at_utc
+        description: "When the review was posted"
+
+  # ============================================================================
+  # MARTS LAYER - Business Logic & Analytical Tests
+  # ============================================================================
+
+  # ---- DIMENSION TABLES ----
+
+  - name: dim_agencies
+    description: "Dimension table for agencies. Denormalized agency data optimized for analytics and reporting."
+    columns:
+      - name: agency_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+        data_type: string
+      - name: agency_name
+        description: "Agency name"
+        tests:
+          - not_null
+        data_type: string
+      - name: email
+        description: "Agency contact email"
+        data_type: string
+      - name: phone_number
+        description: "Agency contact phone"
+        data_type: string
+      - name: base_currency
+        description: "Agency's base currency"
+        tests:
+          - not_null
+        data_type: string
+      - name: city
+        description: "Agency city"
+        data_type: string
+      - name: country_code
+        description: "Agency country code"
+        data_type: string
+      - name: website
+        description: The official website URL of the agency, providing access to agency-related information and services.
+        data_type: string
+        quote: true
+      - name: address_line_1
+        description: The primary address line of the agency, typically including the street name and number.
+        data_type: string
+        quote: true
+      - name: state
+        description: The state or region where the agency is located, used for geographical identification.
+        data_type: string
+        quote: true
+      - name: zip_code
+        description: The postal code associated with the agency's location, used for geographic identification.
+        data_type: string
+        quote: true
+      - name: total_active_properties
+        description: The total number of active properties managed by the agency, calculated by counting properties marked as active in the source data.
+        data_type: int64
+        quote: true
+
+  - name: dim_properties
+    description: "Dimension table for properties. Contains all property attributes optimized for analytical queries."
+    columns:
+      - name: property_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+      - name: agency_id
+        description: "Foreign key to agency (FK)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_agencies')
+                field: agency_id
+      - name: internal_property_name
+        description: "Property name"
+        tests:
+          - not_null
+      - name: property_type
+        description: "Property type classification"
+      - name: is_active
+        description: "Current active status"
+      - name: bedrooms_count
+        description: "Number of bedrooms"
+      - name: beds_count
+        description: "Total beds"
+      - name: bathrooms_count
+        description: "Number of bathrooms"
+      - name: max_guests
+        description: "Maximum occupancy"
+      - name: city
+        description: "City location"
+      - name: country_code
+        description: "Country code"
+      - name: base_daily_rate
+        description: "Standard daily rate"
+      - name: currency
+        description: "Pricing currency"
+      - name: latitude
+        description: "Geographic latitude"
+      - name: longitude
+        description: "Geographic longitude"
+
+  - name: dim_guests
+    description: "Dimension table for guests/customers. Aggregated guest information from leads and bookings."
+    columns:
+      - name: guest_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+      - name: guest_first_name
+        description: "Guest's first name"
+      - name: guest_last_name
+        description: "Guest's last name"
+      - name: guest_email
+        description: "Guest's email"
+      - name: guest_phone_number
+        description: "Guest's phone"
+      - name: country_code
+        description: "Guest's country"
+
+  - name: dim_employees
+    description: "Dimension table for staff members. Contains employee information for team analytics."
+    columns:
+      - name: employee_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+        data_type: string
+      - name: agency_id
+        description: "Foreign key to agency (FK)"
+        tests:
+          - relationships:
+              field: agency_id
+              to: ref('dim_agencies')
+        data_type: string
+      - name: employee_first_name
+        description: "Employee first name"
+      - name: employee_last_name
+        description: "Employee last name"
+      - name: employee_email
+        description: "Employee email"
+      - name: full_name
+        description: The full name of the employee, combining their first and last names.
+        data_type: string
+        quote: true
+      - name: email
+        description: The email address of the employee used for communication purposes.
+        data_type: string
+        quote: true
+      - name: employee_role
+        description: The role or position of the employee within the organization.
+        data_type: string
+        quote: true
+      - name: phone_number
+        description: The complete phone number of the employee, including the area code.
+        data_type: string
+        quote: true
+      - name: phone_area_code
+        description: The area code associated with the employee's phone number, representing the geographic region.
+        data_type: numeric
+        quote: true
+
+  - name: dim_promo_codes
+    description: "Dimension table for promotional codes. Promo code attributes for discount analysis."
+    columns:
+      - name: promo_code_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+      - name: promo_code
+        description: "Promo code"
+        tests:
+          - not_null
+      - name: discount_type
+        description: "Type of discount"
+      - name: discount_value
+        description: "Discount value"
+      - name: valid_from_utc
+        description: "Validity start date"
+      - name: valid_to_utc
+        description: "Validity end date"
+
+  - name: dim_threads
+    description: "Dimension table for communication threads. Guest communication metadata."
+    columns:
+      - name: thread_id
+        description: "Unique identifier (PK)"
+        tests:
+          - not_null
+      - name: subject
+        description: "Thread subject"
+
+  - name: dim_messages
+    description: "Dimension table for messages. Aggregated message data for communication analysis."
+    columns:
+      - name: message_id
+        description: "Unique identifier (PK)"
+        tests:
+          - not_null
+      - name: thread_id
+        description: "Foreign key to thread (FK)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_threads')
+                field: thread_id
+      - name: message_body
+        description: "Message content"
+      - name: created_at_utc
+        description: "Message sent timestamp"
+
+  - name: dim_property_amenities
+    description: "Dimension table for amenities. Property amenities pivoted into boolean flags for easy analysis."
+    columns:
+      - name: property_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_properties')
+                field: property_id
+      - name: has_wifi
+        description: "Whether property has WiFi"
+      - name: has_pool
+        description: "Whether property has a pool"
+      - name: has_full_kitchen
+        description: "Whether property has a full kitchen"
+      - name: has_ac
+        description: "Whether property has air conditioning"
+      - name: has_free_parking
+        description: "Whether property has free parking"
+      - name: has_hot_tub
+        description: "Whether property has a hot tub"
+      - name: has_washer
+        description: "Whether property has a washer"
+      - name: has_safety_basics
+        description: "Whether property has safety basics (smoke detector, fire extinguisher)"
+
+  - name: dim_airbnb_reviews
+    description: "Dimension table for Airbnb reviews. Airbnb-specific review data."
+    columns:
+      - name: review_id
+        description: "A unique identifier for each review in the dataset."
+        tests:
+          - unique
+          - not_null
+        data_type: string
+      - name: property_id
+        description: "The unique identifier for the property associated with the review."
+        tests:
+          - relationships:
+              arguments:
+                field: property_id
+                to: ref('dim_properties')
+        data_type: string
+      - name: rating
+        description: "Review rating"
+      - name: review_text
+        description: "Review comment"
+      - name: created_at_utc
+        description: "Review date"
+      - name: lead_id
+        description: The unique identifier for the lead or guest who left the review.
+        data_type: string
+        quote: true
+      - name: review_date
+        description: The date when the review was submitted by the author.
+        data_type: date
+        quote: true
+      - name: review_year
+        description: The year extracted from the review_date, representing the year the review was submitted.
+        data_type: int64
+        quote: true
+      - name: review_month
+        description: The month extracted from the review_date, representing the month the review was submitted.
+        data_type: int64
+        quote: true
+      - name: review_month_year
+        description: A formatted string representing the month and year of the review date, displayed in 'Month Year' format (e.g., 'January 2023').
+        data_type: string
+        quote: true
+      - name: author_name
+        description: The name of the individual who authored the review.
+        data_type: string
+        quote: true
+      - name: review_title
+        description: The title or headline provided by the reviewer summarizing their feedback.
+        data_type: string
+        quote: true
+      - name: review_content
+        description: The main content of the review provided by the guest, detailing their experience and feedback about the property.
+        data_type: string
+        quote: true
+      - name: private_feedback
+        description: Feedback shared privately by the guest with the host, not visible to other users.
+        data_type: string
+        quote: true
+      - name: sub_category_comments
+        description: Additional comments provided by the guest related to specific aspects or sub-categories of their stay.
+        data_type: string
+        quote: true
+      - name: overall_rating
+        description: The overall rating given by the reviewer for the property, typically on a scale from 1 to 5.
+        data_type: int64
+        quote: true
+      - name: rating_accuracy
+        description: The rating provided by the reviewer that reflects how accurately the property listing matches its description.
+        data_type: int64
+        quote: true
+      - name: rating_cleanliness
+        description: The rating given by the reviewer that evaluates the cleanliness of the property during their stay.
+        data_type: int64
+        quote: true
+      - name: rating_checkin
+        description: Represents the rating given by the reviewer for the check-in process of the property. It is an integer value typically ranging from 1 to 5.
+        data_type: int64
+        quote: true
+      - name: rating_value
+        description: Represents the rating given by the reviewer for the value of the property in terms of cost versus experience. It is an integer value typically ranging from 1 to 5.
+        data_type: int64
+        quote: true
+      - name: rating_location
+        description: Represents the rating given by the reviewer for the location of the property. It is an integer value typically ranging from 1 to 5.
+        data_type: int64
+        quote: true
+      - name: rating_communication
+        description: Represents the rating given by the reviewer for the communication aspect of the property host. It is an integer value typically ranging from 1 to 5.
+        data_type: int64
+        quote: true
+      - name: is_perfect_review
+        description: Indicates whether the review has an overall rating of 5, which is considered a perfect review. It is a boolean value where TRUE represents a perfect review and FALSE represents otherwise.
+        data_type: boolean
+        quote: true
+      - name: is_negative_review
+        description: Indicates whether the review has an overall rating of 3 or below, which is considered a negative review. It is a boolean value where TRUE represents a negative review and FALSE represents otherwise.
+        data_type: boolean
+        quote: true
+      - name: review_length_chars
+        description: The total number of characters in the review content, providing an indication of the review's length.
+        data_type: int64
+        quote: true
+      - name: updated_at_utc
+        description: The timestamp indicating the last update made to the review data, stored in UTC format.
+        data_type: timestamp
+        quote: true
+
+  - name: dim_booking_dot_com_reviews
+    description: "Dimension table for Booking.com reviews. Contains review metrics from Booking.com channel."
+    columns:
+      - name: review_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+      - name: property_id
+        description: "Foreign key to property (FK)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_properties')
+                field: property_id
+      - name: overall_score
+        description: "Overall review score from Booking.com"
+      - name: content_score
+        description: "Content quality score from Booking.com"
+      - name: quality_rating_score
+        description: "Quality rating score from Booking.com"
+
+  - name: dim_property_policies
+    description: "Dimension table for property policies. House rules and policies pivoted into boolean flags for easy analysis."
+    columns:
+      - name: property_id
+        description: "Unique identifier (PK)"
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_properties')
+                field: property_id
+      - name: is_smoking_allowed
+        description: "Whether smoking is allowed"
+      - name: is_pet_friendly
+        description: "Whether property is pet-friendly"
+      - name: is_event_friendly
+        description: "Whether events are allowed"
+      - name: is_family_friendly
+        description: "Whether property is family-friendly"
+      - name: is_children_friendly
+        description: "Whether children are welcome"
+      - name: is_infant_friendly
+        description: "Whether infants are welcome"
+      - name: airbnb_rule_count
+        description: "Count of rules applicable to Airbnb"
+      - name: booking_com_rule_count
+        description: "Count of rules applicable to Booking.com"
+      - name: google_rule_count
+        description: "Count of rules applicable to Google"
+      - name: is_channel_sync_consistent
+        description: "Whether rules are consistent across channels"
+
+  # ---- FACT TABLES ----
+
+  - name: fct_bookings
+    description: "Fact table for bookings. Central fact table containing all booking transactions with denormalized context from leads, orders, properties, and agencies. Grain: one row per booking (lead-order pair)."
+    columns:
+      - name: lead_id
+        description: "Lead identifier (part of composite key)"
+        tests:
+          - not_null
+      - name: order_id
+        description: "Order identifier (part of composite key, may be null for unconverted leads)"
+        tests: []
+      - name: property_id
+        description: "Foreign key to dim_properties"
+        tests:
+          - not_null
+      - name: agency_id
+        description: "Foreign key to dim_agencies"
+        tests:
+          - not_null
+      - name: external_booking_id
+        description: "External booking reference"
+      - name: thread_id
+        description: "Foreign key to dim_threads (may be null if no communication)"
+      - name: internal_property_name
+        description: "Denormalized property name"
+      - name: property_type
+        description: "Denormalized property type"
+      - name: property_city
+        description: "Property city location"
+      - name: agency_name
+        description: "Denormalized agency name"
+      - name: base_currency
+        description: "Agency's base currency"
+      - name: lead_type
+        description: "Type of lead"
+      - name: lead_current_status
+        description: "Current status in sales funnel"
+      - name: lead_source
+        description: "Source of the booking inquiry"
+      - name: guest_id
+        description: "Unique guest identifier"
+      - name: guest_first_name
+        description: "Guest first name (titlecased)"
+      - name: guest_last_name
+        description: "Guest last name (titlecased)"
+      - name: guest_email
+        description: "Guest email address"
+      - name: guest_phone_number
+        description: "Guest phone number"
+      - name: total_guests_count
+        description: "Total number of guests (adults + children + infants)"
+      - name: check_in_date
+        description: "Check-in date"
+      - name: check_out_date
+        description: "Check-out date"
+      - name: total_nights
+        description: "Length of stay in nights"
+      - name: lead_time_days
+        description: "Days between booking and check-in"
+      - name: gross_revenue
+        description: "Total gross revenue from booking"
+      - name: rent_gross_amount
+        description: "Gross accommodation charges before commission"
+      - name: rent_net_amount
+        description: "Net accommodation charges after commission"
+      - name: total_fees_amount
+        description: "Total of all fees"
+      - name: total_cleaning_fee
+        description: "Cleaning fee charged"
+      - name: total_service_fee
+        description: "Service fee charged"
+      - name: total_pet_fee
+        description: "Pet fee charged"
+      - name: total_management_fee
+        description: "Management fee charged"
+      - name: total_other_fees
+        description: "Other miscellaneous fees"
+      - name: total_taxes_amount
+        description: "Total taxes on the booking"
+      - name: average_daily_rate_per_stay
+        description: "Average daily rate calculated for this stay"
+      - name: channel_commission_paid
+        description: "Commission paid to OTA channel"
+      - name: booked_at_utc
+        description: "When the booking was made"
+      - name: lead_created_at_utc
+        description: "When the lead was created"
+      - name: lead_last_updated_at_utc
+        description: "When the lead was last updated"
+      - name: order_created_at_utc
+        description: "When the order was created"
+      - name: order_updated_at_utc
+        description: "When the order was last updated"
+
+  - name: fct_order_transactions
+    description: "Fact table for financial transactions. Aggregated transaction summaries per order showing totals, payments, refunds, and transaction timelines. Grain: one row per order."
+    columns:
+      - name: order_id
+        description: "Unique order identifier (PK)"
+        tests:
+          - unique
+          - not_null
+      - name: total_paid_amount
+        description: "Total amount paid by guest (SALE transactions)"
+        tests:
+          - not_null
+      - name: total_refunded_amount
+        description: "Total amount refunded to guest"
+      - name: net_transaction_amount
+        description: "Net revenue (Payments - Refunds)"
+        tests:
+          - not_null
+      - name: first_payment_at
+        description: "Timestamp of first successful payment"
+      - name: last_transaction_at
+        description: "Timestamp of last successful transaction"
+      - name: transaction_count
+        description: "Number of successful transactions for this order"
+        tests:
+          - not_null
+      - name: has_manual_transaction
+        description: "Whether any transactions were manually created"
+
+  - name: fct_pricing
+    description: "Fact table for pricing and revenue metrics. Aggregated financial data per property and time period. Grain: one row per property per day."
+    columns:
+      - name: property_id
+        description: "Foreign key to dim_properties"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_properties')
+                field: property_id
+      - name: calendar_date
+        description: "Date for this pricing record"
+        tests:
+          - not_null
+      - name: price_amount
+        description: "Price per night for this date"
+      - name: is_unavailable
+        description: "Whether date is blocked/unavailable"
+      - name: min_stay_length
+        description: "Minimum stay requirement"
+      - name: max_stay_length
+        description: "Maximum stay allowed"
+      - name: total_bookings_revenue
+        description: "Total revenue from bookings on this date"
+      - name: booking_count
+        description: "Number of check-ins on this date"

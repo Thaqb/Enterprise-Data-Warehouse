@@ -1,0 +1,31 @@
+with source as (
+    select * from {{ source('hostfully_api', 'raw_property_photos') }}
+),
+
+renamed as (
+    select
+        -- ids
+        uid as property_photo_id,
+        propertyUid as property_id,
+        pmpRoomUid as room_id,
+        airbnbRoomId as airbnb_room_id,
+
+        -- photo details
+        nullif(description, '') as description,
+        cast(displayOrder as int64) as display_order,
+
+        -- image urls
+        originalImageUrl as original_image_url,
+        largeScaleImageUrl as large_image_url,
+        mediumScaleImageUrl as medium_image_url,
+        largeThumbnailScaleImageUrl as large_thumbnail_url,
+        mediumThumbnailScaleImageUrl as medium_thumbnail_url,
+
+        -- metadata
+        safe_cast(updatedUtcDateTime as timestamp) as updated_at_utc
+
+    from source
+)
+
+select * from renamed
+order by property_id, display_order asc

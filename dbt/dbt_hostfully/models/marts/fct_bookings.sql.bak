@@ -1,0 +1,93 @@
+
+
+with leads as (
+    select * from {{ ref('stg_hostfully__leads') }}
+),
+
+orders as (
+    select * from {{ ref('stg_hostfully__orders') }}
+),
+
+properties as (
+    select * from {{ ref('stg_hostfully__properties') }}
+),
+
+agencies as (
+    select * from {{ ref('stg_hostfully__agencies') }}
+),
+threads as (
+    select * from {{ ref('stg_hostfully__threads') }}
+),
+
+final as (
+    select
+        -- 1. IDs & Keys
+        l.lead_id,
+        l.property_id,
+        l.agency_id,
+        o.order_id,
+        l.external_booking_id,
+        t.thread_id,
+        assignee_id,
+        assignee_type,
+        -- 2. Property & Agency Context
+        p.internal_property_name,
+        p.property_type,
+        p.city as property_city,
+        a.agency_name,
+        a.base_currency,
+
+        -- 3. Lead Details
+        l.lead_type,
+        l.lead_current_status,
+        l.lead_source,
+        l.lead_extra_notes, 
+        -- 4. Guest Info
+        l.guest_id,
+        INITCAP(l.guest_first_name) as guest_first_name,
+        INITCAP(l.guest_last_name) as guest_last_name,
+        coalesce(l.guest_email, t.extracted_email) as guest_email,
+        l.guest_phone_number,
+        (coalesce(l.guest_adult_count, 0) + coalesce(l.guest_children_count, 0) + coalesce(l.guest_infant_count, 0)) as total_guests_count,
+
+        -- 5. Stay Metrics
+        l.check_in_date,
+        l.check_out_date,
+        coalesce(o.total_nights, 0) as total_nights,
+        date_diff(date(l.check_in_date), date(l.booked_at_utc), day) as lead_time_days,
+
+        -- 6. Financials
+        coalesce(o.total_amount, 0) as gross_revenue,
+        coalesce(o.rent_gross_amount, 0) as rent_gross_amount,
+        coalesce(o.rent_net_amount, 0) as rent_net_amount,
+        coalesce(o.total_fees_amount, 0) as total_fees_amount,
+        coalesce(o.total_cleaning_fee, 0) as total_cleaning_fee,
+        coalesce(o.total_service_fee, 0) as total_service_fee,
+        coalesce(o.airbnb_service_fee, 0) as airbnb_service_fee,
+        coalesce(o.total_pet_fee, 0) as total_pet_fee,
+        coalesce(o.total_management_fee, 0) as total_management_fee,
+        coalesce(o.total_other_fees, 0) as total_other_fees,
+        coalesce(o.total_taxes_amount, 0) as total_taxes_amount,
+        
+        -- Calculated Metrics
+        -- Average Daily Rate
+        round(safe_divide(o.rent_gross_amount, o.total_nights), 2) as average_daily_rate_per_stay,
+        -- Commission
+        (coalesce(o.rent_gross_amount, 0) - coalesce(o.rent_net_amount, 0)) as channel_commission_paid,
+
+        -- 7. Timestamps
+        l.booked_at_utc,
+        l.lead_created_at_utc as lead_created_at_utc,
+        l.lead_updated_at_utc as lead_last_updated_at_utc,
+        o.created_at_utc as order_created_at_utc,
+        o.updated_at_utc as order_updated_at_utc
+
+    from leads l
+    left join orders o on l.lead_id = o.lead_id
+    left join properties p on l.property_id = p.property_id
+    left join agencies a on l.agency_id = a.agency_id
+    left join threads t on l.lead_id = t.lead_id
+    order by l.lead_created_at_utc desc
+)
+
+select * from final

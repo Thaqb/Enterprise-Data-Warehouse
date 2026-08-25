@@ -1,0 +1,60 @@
+version: 2
+
+sources:
+  - name: hostfully_api
+    database: cloud-data-pipeline-projects
+    schema: prod_hostfully
+    description: "Hostfully API data ingested via dlt pipeline"
+    
+    tables:
+      # dlt Metadata Tables
+      - name: _dlt_loads
+        description: "dlt framework metadata tracking pipeline load execution history and status."
+      - name: _dlt_pipeline_state
+        description: "dlt framework state management for incremental loads and pipeline checkpoints."
+      - name: _dlt_version
+        description: "dlt framework version tracking for schema evolution and compatibility."
+      
+      # Core Business Entities
+      - name: raw_agency
+        description: "Raw agency profile and configuration data pulled from Hostfully API via dlt."
+      - name: raw_employees
+        description: "Raw data for employees and team members pulled from Hostfully API via dlt."
+      - name: raw_leads
+        description: "Raw inquiry and lead management records pulled from Hostfully API via dlt."
+      - name: raw_messages
+        description: "Raw communication messages pulled from Hostfully API via dlt."
+      - name: raw_orders
+        description: "Raw booking orders and financial summaries pulled from Hostfully API via dlt."
+      - name: raw_owners
+        description: "Raw property owner profiles and details pulled from Hostfully API via dlt."
+      - name: raw_promo_codes
+        description: "Raw discount and promotional code data pulled from Hostfully API via dlt."
+      - name: raw_transactions
+        description: "Raw payment and transaction history records pulled from Hostfully API via dlt."
+      
+      # Property-Related Tables
+      - name: raw_properties
+        description: "Raw property listings and core attributes pulled from Hostfully API via dlt."
+      - name: raw_property_amenities
+        description: "Raw lists of features and amenities per property pulled from Hostfully API via dlt."
+      - name: raw_property_calendar
+        description: "Raw availability and booking dates per property pulled from Hostfully API via dlt."
+      - name: raw_property_channel_links
+        description: "Raw mapping of properties to external booking channels pulled from Hostfully API via dlt."
+      - name: raw_property_descriptions
+        description: "Raw marketing text and property descriptions pulled from Hostfully API via dlt."
+      - name: raw_property_owner
+        description: "Raw relationship mapping between owners and properties pulled from Hostfully API via dlt."
+      - name: raw_property_rules
+        description: "Raw house rules and rental policies pulled from Hostfully API via dlt."
+      
+      # Channel-Specific Tables
+      - name: raw_property_reviews_airbnb
+        description: "Raw Airbnb-specific guest reviews for properties pulled from Hostfully API via dlt."
+      - name: raw_booking_dot_com_status
+        description: "Raw booking status codes and mappings for Booking.com pulled from Hostfully API via dlt."
+      - name: raw_property_booking_dot_com_settings
+        description: "Raw Booking.com-specific settings and configurations for properties pulled from Hostfully API via dlt."
+      - name: raw_property_reviews_booking
+        description: "Raw Booking.com-specific guest reviews for properties pulled from Hostfully API via dlt."

@@ -1,0 +1,15 @@
+{% snapshot snp_hostfully__rate_multipliers %}
+
+{{
+    config(
+      target_database='cloud-data-pipeline-projects',
+      target_schema='snapshots',
+      unique_key='multiplier_id',
+      strategy='check',
+      check_cols=['airbnb_rate_multiplier', 'google_rate_multiplier', 'booking_dot_com_rate_multiplier'],
+    )
+}}
+
+select * from {{ ref('stg_hostfully__rate_multipliers') }}
+
+{% endsnapshot %}

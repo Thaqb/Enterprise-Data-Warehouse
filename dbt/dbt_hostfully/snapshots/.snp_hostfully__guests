@@ -1,0 +1,15 @@
+{% snapshot snp_hostfully__guests %}
+
+{{
+    config(
+      target_database='cloud-data-pipeline-projects',
+      target_schema='snapshots',
+      unique_key='guest_id',
+      strategy='check',
+      check_cols=['email', 'phone_number', 'city', 'state'],
+    )
+}}
+
+select * from {{ ref('stg_hostfully__guests') }}
+
+{% endsnapshot %}

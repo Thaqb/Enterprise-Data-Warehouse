@@ -1,0 +1,33 @@
+with source as (
+    select * from {{ source('hostfully_api', 'raw_property_fees') }}
+),
+
+renamed as (
+    select
+        -- ids
+        uid as property_fee_id,
+        propertyUid as property_id,
+
+        -- fee details
+        name as fee_name,
+        type as fee_type,
+        scope as fee_scope,
+        amount,
+        amountType as amount_type,
+        taxationRate as taxation_rate,
+        optional as is_optional,
+        attestation as has_attestation,
+        longTermStayExemption as long_term_stay_exemption_days,
+
+        -- platform specific types
+        hostfullyType as hostfully_fee_type,
+        airbnbType as airbnb_fee_type,
+        bookingDotComType as booking_dot_com_fee_type,
+
+        -- metadata
+        safe_cast(updatedUtcDateTime as timestamp) as updated_at_utc
+
+    from source
+)
+
+select * from renamed

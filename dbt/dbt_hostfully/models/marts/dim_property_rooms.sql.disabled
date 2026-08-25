@@ -1,0 +1,3 @@
+select *
+from {{ref ('stg_hostfully__property_rooms')}}
+order by property_id, room_number asc

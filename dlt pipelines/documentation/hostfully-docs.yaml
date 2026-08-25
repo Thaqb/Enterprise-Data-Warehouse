@@ -1,0 +1,100 @@
+auth_info:
+- information_source; https://dev.hostfully.com/reference/version-migration-guide-for-api-v3x:
+  - 'Basic authentication is required using clientId and clientSecret credentials.
+    Send these as an Authorization header in the format `Authorization: {clientId}:{clientSecret}`
+    for PUT requests to the migration endpoint in both sandbox (https://sandbox.hostfully.com/api/version)
+    and production (https://api.hostfully.com/api/version) environments.'
+- information_source; https://dev.hostfully.com/reference/hostfully-graphql-api:
+  - Authenticate the request by adding proper authorization headers. However, the
+    documentation provided does not specify the exact header names, parameter names,
+    or values required for authentication. To use this GraphQL API, you must include
+    authorization headers in your requests, but the specific details of which headers
+    and how to obtain credentials are not described in this excerpt.
+  - Authorization headers are required to access the GraphQL API endpoint at https://sandbox-api.hostfully.com/api/v3/graphql.
+    The documentation states that authorization headers must be added to load the
+    GraphQL schema and send requests, but does not specify the exact header name,
+    token type, or how to obtain credentials.
+- information_source; https://dev.hostfully.com/reference/updateapiversion:
+  - Authorization header is required as a string. The exact header name is Authorization.
+    No additional details about the auth scheme, token format, or how to obtain credentials
+    are provided in this documentation excerpt.
+- information_source; https://dev.hostfully.com/reference/currentapiversion:
+  - API key authentication is required via the Authorization header. Send your API
+    key in the Authorization header for all requests to this endpoint.
+pagination_info:
+- information_source; https://dev.hostfully.com/reference/hostfully-graphql-api:
+  - Pagination uses `_limit` and `_cursor` query parameters. The `_limit` parameter
+    defaults to 20 with a maximum of 100. The response includes a `nextCursor` value
+    in the `extensions` section, which should be passed as the `_cursor` parameter
+    in the next request to retrieve subsequent pages.
+- information_source; https://dev.hostfully.com/reference/getall_16:
+  - Pagination uses _cursor (string) and _limit (string) as request parameters. Response
+    includes _metadata object with count and totalCount fields, plus _paging object
+    containing _limit (int32) and _nextCursor (string). Use _nextCursor value as _cursor
+    in subsequent requests to fetch next page.
+- information_source; https://dev.hostfully.com/reference/findleads:
+  - The API uses limit-offset pagination. The _limit parameter (int32) specifies the
+    number of results per request, and _cursor parameter (string) is used to navigate
+    through pages. The response returns a leads array; use the _cursor value from
+    the response to request the next page by passing it in the subsequent request.
+- information_source; https://dev.hostfully.com/reference/findallmessagesforagency:
+  - Pagination uses cursor-based navigation with _cursor (int32) as the request parameter
+    and _nextCursor (string) in the response _paging object to retrieve subsequent
+    pages. The _limit (int32) parameter controls page size, while count and totalCount
+    fields indicate current and total message counts respectively.
+  - Use query parameters _limit (int32) for page size and _cursor (string) for cursor-based
+    pagination. The response contains a messages array. Continue pagination by using
+    the _cursor value from the previous response in the next request.
+rate_limit_info:
+- information_source; https://dev.hostfully.com/reference/getting-started#rate-limit:
+  - The Hostfully API allows 10,000 calls within a 1 hour window per calling client.
+    Use the HTTP headers in order to understand where the application is at for a given rate limit, on the method that was just utilized. The HTTP headers to monitor are the following:
+    x-ratelimit-limit; the rate limit ceiling for that given endpoint
+    x-ratelimit-remaining; the number of requests left for the 15 minute window
+    When hitting the rate limit, please pause your code for 1 hour and retry the call.
+    API returns standard error codes; 429 - Rate limit
+blacklisting_info:
+- information_source; https://dev.hostfully.com/reference/getting-started#blacklisting:
+  - If a client application abuses the rate limits, it will be blacklisted. Blacklisted client apps are unable to get a response from the Hostfully API. If you or your application has been blacklisted and you think there has been a mistake, you can email us at api@hostfully.com to request assistance.
+possible_base_urls:
+- information_source; https://dev.hostfully.com/reference/findbyuid:
+  - development base url : https://sandbox.hostfully.com/api/v3.2
+- information_source; https://dev.hostfully.com/reference/version-migration-guide-for-api-v3x:
+  - production base url : https://api.hostfully.com/api/v3.2/
+possible_endpoints:
+- information_source; https://dev.hostfully.com/reference/findbyuid:
+  - GET /transactions/{uid}
+    Retrieve transaction by uid
+  - GET /transactions
+    orderUid - required parameter 
+    The unique ID of the order related to transactions you want to retrieve.
+    createdSince - optional, date-time string (eg. 2025-12-02T15:19:23) to filter transactions created since this date.
+- information_source; https://dev.hostfully.com/reference/findallmessagesforagency:
+  - GET /messages
+    Retrieve messages with optional filters for agencyUid, threadUid, leadUid
+    creation date, and pagination parameters (_limit, _cursor).
+    Note. Either agencyUid, threadUid or leadUid must be provided.
+    
+  - GET /messages/{uid}
+    Retrieve message by uid
+- information_source; https://dev.hostfully.com/reference/findleads:
+  - GET /leads
+    Search leads with filters 
+    One of 'propertyUid', 'agencyUid', 'leadUids' parameters is required. Endpoint will return only those leads which the api client is authorized to access.
+    pagination parameters (_limit, _cursor)
+    updatedSince - optional, date-time string (eg. 2025-12-02T15:19:23) to filter leads updated since this date.
+  - GET /leads/{uid}
+    Fetches a single lead by its unique identifier.
+- information_source; https://dev.hostfully.com/reference/findbyagencyuid:
+  - GET /properties
+    Retrieves list of properties for an agency with optional updatedSince filter
+    pagination parameters (_limit, _cursor)
+    agencyUid - required
+    updatedSince - optional, date-time string (eg. 2025-12-02T15:19:23) to filter properties updated since this date.
+  - GET /properties/{uid}
+    Retrieves a single property by its unique identifier.
+- information_source; https://dev.hostfully.com/reference/getall_9:
+  - GET /orders
+    Retrieves orders with optional filtering by guest UID, property UID, lead UID or update timestamp. At least one filter parameter must be provided
+    pagination parameters (_limit, _cursor)
+    updatedSince - optional, date-time string (eg. 2025-12-02T15:19:23) to filter orders updated since this date.

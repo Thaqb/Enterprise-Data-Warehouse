@@ -1,0 +1,28 @@
+with source as (
+    select * from {{ source('hostfully_api', 'raw_property_rooms') }}
+),
+
+renamed as (
+    select
+        -- ids
+        uid as room_id,
+        propertyUid as property_id,
+
+        -- room details
+        roomType as room_type,
+        cast(roomNumber as int64) as room_number,
+        hasPrivateBathroom as has_private_bathroom,
+
+        -- bed counts (flattened from JSON)
+        coalesce(cast(json_value(bedCounts, '$.singleBed') as int64), 0) as count_single_bed,
+        coalesce(cast(json_value(bedCounts, '$.doubleBed') as int64), 0) as count_double_bed,
+        coalesce(cast(json_value(bedCounts, '$.queenBed') as int64), 0) as count_queen_bed,
+        coalesce(cast(json_value(bedCounts, '$.kingBed') as int64), 0) as count_king_bed,
+        coalesce(cast(json_value(bedCounts, '$.sofaBed') as int64), 0) as count_sofa_bed,
+        -- metadata
+        safe_cast(updatedUtcDateTime as timestamp) as updated_at_utc
+
+    from source
+)
+
+select * from renamed
