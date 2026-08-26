@@ -3,7 +3,7 @@ name: ticket-generator
 description: Generate highly structured GitHub issues(tickets) for Enterprise-Data-Warehouse under Thaqb org.
 model: gpt-4o
 tools:
-  - githubRepo
+  - web/githubRepo
 ---
 
 # Background Context
