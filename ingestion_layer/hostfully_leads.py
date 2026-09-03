@@ -10,6 +10,8 @@ Run this file directly to execute the complete leads pipeline.
 import logging
 import dlt
 import sys
+from config.loader import HostfullyConfig
+from config.conf_pipeline import PipelineConfig
 from hostfully_pipeline.resources import (
     hostfully_rest_api_source,
     threads_incremental,
@@ -41,21 +43,16 @@ def run_leads_pipeline():
     Returns:
         Load info from the final stage
     """
-    # Read environment mode from config (DEV or PROD)
-    try:
-        env_mode = dlt.config.get("environment.mode") or "DEV"
-    except Exception:
-        env_mode = "DEV"
-    env_destination = "bigquery" if env_mode == "PROD" else "duckdb"
-    env_dataset = f"{env_mode.lower()}_hostfully"
+    hostfully_config = HostfullyConfig.from_dlt()
+    pipeline_config = PipelineConfig.from_environment()
     
-    logger.info(f"Pipeline running in {env_mode} mode (destination: {env_destination}, dataset: {env_dataset})")
+    logger.info(f"Pipeline running in {pipeline_config.environment} mode (destination: {pipeline_config.destination}, dataset: {pipeline_config.dataset})")
     
     # Create pipeline
     pipeline = dlt.pipeline(
         pipeline_name='hostfully_pipeline',
-        destination=env_destination,
-        dataset_name=env_dataset
+        destination=pipeline_config.destination,
+        dataset_name=pipeline_config.dataset,
     )
     
     # =========================================================================
@@ -85,7 +82,7 @@ def run_leads_pipeline():
     # =========================================================================
     
     # Detect if this is first run
-    first_run = is_first_messages_run(pipeline.pipeline_name)
+    first_run = is_first_messages_run(pipeline.pipeline_name, pipeline_config)
     
     # Create a fresh source for messages stage (reuse same source name to keep schema unified)
     messages_source = hostfully_rest_api_source()
@@ -100,7 +97,7 @@ def run_leads_pipeline():
         logger.info("Fetching all messages for historical leads to establish baseline...")
         
         messages_from_leads = (
-            lead_uids_from_db(pipeline_name=pipeline.pipeline_name) 
+            lead_uids_from_db(pipeline_name=pipeline.pipeline_name, pipeline_config=pipeline_config) 
             | fetch_messages_for_lead
         )
         
