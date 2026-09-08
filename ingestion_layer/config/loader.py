@@ -80,15 +80,6 @@ class HostfullyConfig:
         )
 
 
-def get_env_mode() -> str:
-    """Get environment mode (DEV or PROD).
-    
-    Returns:
-        Environment mode string, defaults to "DEV"
-    """
-    return dlt.config.get("environment.mode") or "DEV"
-
-
 def validate_api_key(api_key: str) -> None:
     """Validate that API key is properly configured.
     
@@ -99,7 +90,7 @@ def validate_api_key(api_key: str) -> None:
         ValueError: If api_key is missing or is still a sentinel value
     """
     if not api_key or not isinstance(api_key, str):
-        raise ValueError(
+        raise ValueError(  
             "Missing required secret: api_key\n"
             "Please set it in .dlt/secrets.toml: api_key = \"your-hostfully-api-key\""
         )

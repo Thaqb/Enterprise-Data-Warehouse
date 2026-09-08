@@ -5,12 +5,15 @@ import duckdb
 from typing import Iterator, Dict, Any, List, Optional
 import dlt
 
+from config.conf_pipeline import PipelineConfig
+
 logger = logging.getLogger(__name__)
 
 
 @dlt.resource(name="lead_uids_from_db")
 def lead_uids_from_db(
-    pipeline_name: str
+    pipeline_name: str,
+    pipeline_config: PipelineConfig,
 ) -> Iterator[str]:
     """Extract all lead UIDs from the destination database.
     
@@ -19,24 +22,20 @@ def lead_uids_from_db(
     This ensures new messages on old leads are captured.
     
     Behavior depends on environment:
-      - Non-PROD (DEV, etc.): reads from local DuckDB file `{pipeline_name}.duckdb`
-      - PROD: queries BigQuery using credentials from `dlt.secrets['destination.bigquery.credentials']`
+      - dev: reads from local DuckDB file `{pipeline_name}.duckdb`
+      - prod: queries BigQuery using credentials from `dlt.secrets['destination.bigquery.credentials']`
     
     Args:
         pipeline_name: Name of the dlt pipeline (to locate DuckDB file)
+        pipeline_config: Resolved runtime configuration (environment/destination/dataset)
         
     Yields:
         Lead UIDs (one at a time for parallel processing)
     """
-    # Determine environment mode and dataset
-    try:
-        env_mode = dlt.config.get("environment.mode") or "DEV"
-    except Exception:
-        env_mode = "DEV"
-    dataset_name = f"{env_mode.lower()}_hostfully"
-    
-    # DEV: read from local DuckDB
-    if env_mode != "PROD":
+    dataset_name = pipeline_config.dataset
+
+    # dev: read from local DuckDB
+    if pipeline_config.destination != "bigquery":
         db_path = f"{pipeline_name}.duckdb"
         try:
             conn = duckdb.connect(db_path, read_only=True)
@@ -47,7 +46,6 @@ def lead_uids_from_db(
             
             logger.info(f"Found {len(lead_uids)} historical leads to fetch messages for (DuckDB)")
             
-            # Yield one at a time for parallel processing
             for lead_uid in lead_uids:
                 yield lead_uid
                 
@@ -58,17 +56,15 @@ def lead_uids_from_db(
             if 'conn' in locals():
                 conn.close()
     
-    # PROD: read from BigQuery
+    # prod: read from BigQuery
     else:
         try:
-            # Lazy import to avoid additional dependency unless needed
             from google.cloud import bigquery
             from google.oauth2 import service_account
         except Exception as e:
-            logger.error("BigQuery support requires 'google-cloud-bigquery' and 'google-auth'. Install them to query PROD destination.")
+            logger.error("BigQuery support requires 'google-cloud-bigquery' and 'google-auth'. Install them to query prod destination.")
             raise
         
-        # Obtain credentials from dlt secrets
         creds_info = None
         try:
             creds_info = dlt.secrets.get("destination.bigquery.credentials")
@@ -76,7 +72,7 @@ def lead_uids_from_db(
             creds_info = None
         
         if not creds_info or not isinstance(creds_info, dict):
-            logger.error("BigQuery credentials not found in dlt.secrets['destination.bigquery.credentials']. Cannot query PROD destination.")
+            logger.error("BigQuery credentials not found in dlt.secrets['destination.bigquery.credentials']. Cannot query prod destination.")
             return
         
         project_id = creds_info.get("project_id")
@@ -91,7 +87,6 @@ def lead_uids_from_db(
             
             logger.info(f"Found {len(lead_uids)} historical leads to fetch messages for (BigQuery)")
             
-            # Yield one at a time for parallel processing
             for lead_uid in lead_uids:
                 yield lead_uid
                 
@@ -100,36 +95,31 @@ def lead_uids_from_db(
             return
 
 
-def is_first_messages_run(pipeline_name: str) -> bool:
+def is_first_messages_run(pipeline_name: str, pipeline_config: PipelineConfig) -> bool:
     """Check if messages table exists in the destination.
     
     Returns True if this is the first run (messages table doesn't exist),
     False if table exists (subsequent run).
     
     Behavior depends on environment:
-      - Non-PROD (DEV, etc.): checks DuckDB file `{pipeline_name}.duckdb`
-      - PROD: queries BigQuery information schema
+      - dev: checks DuckDB file `{pipeline_name}.duckdb`
+      - prod: queries BigQuery information schema
     
     Args:
         pipeline_name: Name of the dlt pipeline
+        pipeline_config: Resolved runtime configuration (environment/destination/dataset)
         
     Returns:
         bool: True if first run, False if subsequent run
     """
-    # Determine environment mode and dataset
-    try:
-        env_mode = dlt.config.get("environment.mode") or "DEV"
-    except Exception:
-        env_mode = "DEV"
-    dataset_name = f"{env_mode.lower()}_hostfully"
-    
-    # DEV: check DuckDB
-    if env_mode != "PROD":
+    dataset_name = pipeline_config.dataset
+
+    # dev: check DuckDB
+    if pipeline_config.destination != "bigquery":
         try:
             db_path = f"{pipeline_name}.duckdb"
             conn = duckdb.connect(db_path, read_only=True)
             
-            # Check if raw_messages table exists
             result = conn.execute(
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'raw_messages'"
             ).fetchone()
@@ -143,7 +133,7 @@ def is_first_messages_run(pipeline_name: str) -> bool:
             logger.warning(f"Could not check for messages table in DuckDB: {e}. Assuming first run.")
             return True
     
-    # PROD: check BigQuery
+    # prod: check BigQuery
     else:
         try:
             from google.cloud import bigquery
@@ -166,8 +156,6 @@ def is_first_messages_run(pipeline_name: str) -> bool:
             credentials = service_account.Credentials.from_service_account_info(creds_info)
             client = bigquery.Client(project=project_id, credentials=credentials)
             
-            # Check if raw_messages table exists
-            table_ref = f"{project_id}.{dataset_name}.raw_messages"
             query = f"""
                 SELECT COUNT(*) as cnt
                 FROM `{project_id}.{dataset_name}.INFORMATION_SCHEMA.TABLES`
@@ -184,23 +172,22 @@ def is_first_messages_run(pipeline_name: str) -> bool:
             return True
 
 
-def get_rows_count_from_db(pipeline) -> dict:
+def get_rows_count_from_db(pipeline, pipeline_config: PipelineConfig) -> dict:
     """Get row counts for known tables and return a dict of counts.
 
     Queries the destination database for current row counts. If a table
     doesn't exist (first run), the count for that table will be 0.
     
     Behavior depends on environment:
-      - Non-PROD (DEV, etc.): reads from local DuckDB file
-      - PROD: queries BigQuery
+      - dev: reads from local DuckDB file
+      - prod: queries BigQuery
 
     Args:
         pipeline: dlt pipeline object
+        pipeline_config: Resolved runtime configuration (environment/destination/dataset)
 
     Returns:
-        dict: mapping of table names to counts, e.g.
-              {"raw_leads": int, "raw_messages": int, "raw_orders": int,
-               "raw_transactions": int, "raw_properties": int}
+        dict: mapping of table names to counts
     """
     counts = {
         "raw_leads": 0,
@@ -209,72 +196,30 @@ def get_rows_count_from_db(pipeline) -> dict:
         "raw_transactions": 0,
         "raw_properties": 0,
     }
-    
-    # Determine environment mode
-    try:
-        env_mode = dlt.config.get("environment.mode") or "DEV"
-    except Exception:
-        env_mode = "DEV"
-    
+
     dataset_name = pipeline.dataset_name
-    
-    # DEV: read from DuckDB
-    if env_mode != "PROD":
+
+    # dev: read from DuckDB
+    if pipeline_config.destination != "bigquery":
         try:
             db_path = f"{pipeline.pipeline_name}.duckdb"
             conn = duckdb.connect(db_path, read_only=True)
 
-            # Get raw_leads count
-            try:
-                result = conn.execute(
-                    f"SELECT COUNT(*) FROM {dataset_name}.raw_leads"
-                ).fetchone()
-                counts["raw_leads"] = result[0] if result else 0
-            except Exception:
-                pass
-
-            # Get raw_messages count
-            try:
-                result = conn.execute(
-                    f"SELECT COUNT(*) FROM {dataset_name}.raw_messages"
-                ).fetchone()
-                counts["raw_messages"] = result[0] if result else 0
-            except Exception:
-                pass
-
-            # Get raw_orders count
-            try:
-                result = conn.execute(
-                    f"SELECT COUNT(*) FROM {dataset_name}.raw_orders"
-                ).fetchone()
-                counts["raw_orders"] = result[0] if result else 0
-            except Exception:
-                pass
-
-            # Get raw_transactions count
-            try:
-                result = conn.execute(
-                    f"SELECT COUNT(*) FROM {dataset_name}.raw_transactions"
-                ).fetchone()
-                counts["raw_transactions"] = result[0] if result else 0
-            except Exception:
-                pass
-
-            # Get raw_properties count
-            try:
-                result = conn.execute(
-                    f"SELECT COUNT(*) FROM {dataset_name}.raw_properties"
-                ).fetchone()
-                counts["raw_properties"] = result[0] if result else 0
-            except Exception:
-                pass
+            for table_name in counts.keys():
+                try:
+                    result = conn.execute(
+                        f"SELECT COUNT(*) FROM {dataset_name}.{table_name}"
+                    ).fetchone()
+                    counts[table_name] = result[0] if result else 0
+                except Exception:
+                    pass
 
             conn.close()
 
         except Exception as e:
             logger.debug(f"Could not get row counts from DuckDB: {e}")
     
-    # PROD: read from BigQuery
+    # prod: read from BigQuery
     else:
         try:
             from google.cloud import bigquery
@@ -296,10 +241,8 @@ def get_rows_count_from_db(pipeline) -> dict:
         try:
             credentials = service_account.Credentials.from_service_account_info(creds_info)
             client = bigquery.Client(project=project_id, credentials=credentials)
-            
-            tables = ["raw_leads", "raw_messages", "raw_orders", "raw_transactions", "raw_properties"]
-            
-            for table_name in tables:
+
+            for table_name in counts.keys():
                 try:
                     table_ref = f"{project_id}.{dataset_name}.{table_name}"
                     query = f"SELECT COUNT(*) as cnt FROM `{table_ref}`"
@@ -307,7 +250,6 @@ def get_rows_count_from_db(pipeline) -> dict:
                     result = list(query_job.result())
                     counts[table_name] = result[0][0] if result else 0
                 except Exception:
-                    # Table doesn't exist or query failed
                     pass
                     
         except Exception as e:
@@ -317,32 +259,29 @@ def get_rows_count_from_db(pipeline) -> dict:
 
 
 @dlt.resource(name="property_uids_from_db")
-def property_uids_from_db(pipeline_name: str) -> Iterator[str]:
+def property_uids_from_db(
+    pipeline_name: str,
+    pipeline_config: PipelineConfig,
+) -> Iterator[str]:
     """Yield lists of property UIDs known in the pipeline destination.
 
-    Reads distinct `uid` values from the `{env}_hostfully.raw_properties` table
-    for the given pipeline. Behavior depends on environment:
-      - Non-PROD (DEV, etc.): reads from local DuckDB file `{pipeline_name}.duckdb`.
-      - PROD: queries BigQuery using credentials from
+    Reads distinct `uid` values from the `{dataset}.raw_properties` table.
+    Behavior depends on environment:
+      - dev: reads from local DuckDB file `{pipeline_name}.duckdb`.
+      - prod: queries BigQuery using credentials from
         `dlt.secrets['destination.bigquery.credentials']`.
 
     Args:
         pipeline_name: name of the dlt pipeline (used to locate the DuckDB file)
+        pipeline_config: Resolved runtime configuration (environment/destination/dataset)
 
     Yields:
-        list[str]: a single ordered list of distinct property UIDs. If the table
-        does not exist or no rows are found (e.g. first run), the generator may
-        return without yielding or yield an empty list.
+        list[str]: a single ordered list of distinct property UIDs.
     """
-    # Determine environment mode and dataset
-    try:
-        env_mode = dlt.config.get("environment.mode") or "DEV"
-    except Exception:
-        env_mode = "DEV"
-    dataset_name = f"{env_mode.lower()}_hostfully"
+    dataset_name = pipeline_config.dataset
 
-    # DEV: read from local DuckDB
-    if env_mode != "PROD":
+    # dev: read from local DuckDB
+    if pipeline_config.destination != "bigquery":
         db_path = f"{pipeline_name}.duckdb"
         try:
             conn = duckdb.connect(db_path, read_only=True)
@@ -357,17 +296,15 @@ def property_uids_from_db(pipeline_name: str) -> Iterator[str]:
             if 'conn' in locals():
                 conn.close()
 
-    # PROD: read from BigQuery
+    # prod: read from BigQuery
     else:
         try:
-            # Lazy import to avoid additional dependency unless needed
             from google.cloud import bigquery
             from google.oauth2 import service_account
         except Exception as e:
-            logger.error("BigQuery support requires 'google-cloud-bigquery' and 'google-auth'. Install them to query PROD destination.")
+            logger.error("BigQuery support requires 'google-cloud-bigquery' and 'google-auth'. Install them to query prod destination.")
             raise
 
-        # Obtain credentials from dlt secrets
         creds_info = None
         try:
             creds_info = dlt.secrets.get("destination.bigquery.credentials")
@@ -375,7 +312,7 @@ def property_uids_from_db(pipeline_name: str) -> Iterator[str]:
             creds_info = None
 
         if not creds_info or not isinstance(creds_info, dict):
-            logger.error("BigQuery credentials not found in dlt.secrets['destination.bigquery.credentials']. Cannot query PROD destination.")
+            logger.error("BigQuery credentials not found in dlt.secrets['destination.bigquery.credentials']. Cannot query prod destination.")
             return
 
         project_id = creds_info.get("project_id")

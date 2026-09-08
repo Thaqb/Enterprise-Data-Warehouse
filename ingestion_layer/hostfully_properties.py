@@ -2,11 +2,14 @@
 
 import logging
 import dlt
+from config.loader import HostfullyConfig
+from config.conf_pipeline import PipelineConfig
 from hostfully_pipeline.resources.properties import hostfully_properties_source
 from hostfully_pipeline.resources.property_calendar import property_calendar_transformer_factory
 from hostfully_pipeline.resources.property_reviews_airbnb import property_reviews_airbnb_factory
 from hostfully_pipeline.resources.property_reviews_booking import property_reviews_booking_factory
 from hostfully_pipeline.utils import property_uids_from_db as property_uids_from_db_resource
+
 # logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -16,23 +19,18 @@ logging.basicConfig(
 )
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
-# Read environment mode from config (DEV or PROD)
-try:
-    env_mode = dlt.config.get("environment.mode") or "DEV"
-except Exception:
-    env_mode = "DEV"
-env_destination = "bigquery" if env_mode == "PROD" else "duckdb"
-env_dataset = f"{env_mode.lower()}_hostfully"
-logger.info(f"Pipeline running in {env_mode} mode (destination: {env_destination}, dataset: {env_dataset})")
 
 
+hostfully_config = HostfullyConfig.from_dlt()
+pipeline_config = PipelineConfig.from_environment()
 
+logger.info(f"Pipeline running in {pipeline_config.environment} mode (destination: {pipeline_config.destination}, dataset: {pipeline_config.dataset})")
 
 pipeline = dlt.pipeline(
-        pipeline_name="hostfully_pipeline",
-        destination=env_destination,
-        dataset_name=env_dataset
-    )
+    pipeline_name="hostfully_pipeline",
+    destination=pipeline_config.destination,
+    dataset_name=pipeline_config.dataset
+)
 
 # =============================================================================
 # STAGE 1: PROPERTIES (must run first to populate raw_properties table)
@@ -53,7 +51,10 @@ logger.info("=== STAGE 2: CALENDAR + REVIEWS ===")
 logger.info("=" * 80)
 
 # Get property UIDs from the now-populated raw_properties table
-uids_resource = property_uids_from_db_resource(pipeline_name=pipeline.pipeline_name)
+uids_resource = property_uids_from_db_resource(
+    pipeline_name=pipeline.pipeline_name,
+    pipeline_config=pipeline_config
+)
 
 # Add transformed resources to the source to keep under same 'hostfully' schema
 properties_source.resources.add(uids_resource | property_calendar_transformer_factory())
