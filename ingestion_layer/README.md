@@ -13,23 +13,6 @@ Supported values (case-sensitive, lowercase only):
 
 Any other value — missing, empty, `DEV`, `PROD`, `test`, etc. — causes the pipeline to raise `ValueError` immediately. There is no fallback to `dev`.
 
-## How it works
-
-`config/conf_pipeline.py` defines `PipelineConfig`, the single source of truth for runtime environment configuration:
-
-```python
-from config.conf_pipeline import PipelineConfig
-
-pipeline_config = PipelineConfig.from_environment()
-# pipeline_config.environment -> "dev" | "prod"
-# pipeline_config.destination -> "duckdb" | "bigquery"
-# pipeline_config.dataset     -> "dev_hostfully" | "prod_hostfully"
-```
-
-Every pipeline entry point (`hostfully_leads.py`, `hostfully_properties.py`, `hostfully_empolyees.py`) loads `pipeline_config` alongside `HostfullyConfig` (Hostfully API-specific settings, unrelated to environment) and passes `pipeline_config.destination` / `pipeline_config.dataset` into `dlt.pipeline()`.
-
-Database utilities in `hostfully_pipeline/utils/database.py` receive the resolved `PipelineConfig` as a parameter rather than reading `APP_ENV` or rebuilding the dataset name themselves.
-
 ## Running locally (dev)
 
 **Windows (PowerShell, persists across terminals):**
