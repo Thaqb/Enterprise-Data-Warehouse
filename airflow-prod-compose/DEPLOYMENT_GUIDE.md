@@ -19,7 +19,7 @@ This deployment sets up 3 Airflow DAGs orchestrating dlt extraction and dbt tran
 
 ## Pre-Deployment Checklist
 
-1. **Verify dlt venv exists**: `/home/mahmoud/dlt pipelines/.venv/bin/activate`
+1. **Verify dlt venv exists**: `/home/mahmoud/ingestion_layer/.venv/bin/activate`
 2. **Verify dbt venv exists**: `/home/mahmoud/DWH/dbt/dbt_hostfully/.venv/bin/activate`
 3. **Verify GCP credentials**: `/home/mahmoud/DWH/cloud-data-pipeline-projects-dd84571727d2.json`
 4. **Verify Gmail App Password**: `itvg hojr lhcx kkvu` (stored in .env)
@@ -96,7 +96,7 @@ Trigger a manual run of the employees pipeline (safest for testing):
 ## Architecture Details
 
 ### Volume Mounts (Host → Container)
-- `/home/mahmoud/dlt pipelines` → `/opt/airflow/dlt_pipelines`
+- `/home/mahmoud/ingestion_layer` → `/opt/airflow/ingestion_layer`
 - `/home/mahmoud/DWH/dbt/dbt_hostfully` → `/opt/airflow/dbt_project`
 - `/home/mahmoud/DWH/cloud-data-pipeline-projects-dd84571727d2.json` → `/opt/airflow/secrets/gcp_credentials.json`
 
@@ -161,8 +161,8 @@ send_email(
   ```
 
 ### dlt venv not found
-- Check mount: `docker compose exec airflow-apiserver ls -la /opt/airflow/dlt_pipelines/.venv/`
-- Verify host path exists: `ls -la "/home/mahmoud/dlt pipelines/.venv/"`
+- Check mount: `docker compose exec airflow-apiserver ls -la /opt/airflow/ingestion_layer/.venv/`
+- Verify host path exists: `ls -la "/home/mahmoud/ingestion_layer/.venv/"`
 
 ### dbt venv not found
 - Check mount: `docker compose exec airflow-apiserver ls -la /opt/airflow/dbt_project/.venv/`

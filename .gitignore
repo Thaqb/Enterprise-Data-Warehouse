@@ -53,3 +53,5 @@ logs/
 
 .DS_Store
 .mcp.json
+airflow-prod-compose/.vscode/
+.claude/

@@ -38,7 +38,7 @@ dlt_docs:
     describtion: "Learn how to leverage parallelism within a dlt pipeline to optimize data extraction and processing performance."
     url: "https://dlthub.com/docs/reference/performance#parallelism-within-a-pipeline"
   - title: "Running multiple pipelines in parallel"
-    describtion: "Discover how to run multiple dlt pipelines in parallel to enhance data processing efficiency and throughput."
+    describtion: "Discover how to run multiple ingestion_layer in parallel to enhance data processing efficiency and throughput."
     url: "https://dlthub.com/docs/reference/performance#running-multiple-pipelines-in-parallel"
   - title: "REST API response action"
     describtion: "Learn how to use REST API response actions in dlt to handle and process API responses effectively."
