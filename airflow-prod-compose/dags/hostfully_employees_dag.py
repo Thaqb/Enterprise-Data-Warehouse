@@ -22,7 +22,7 @@ from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig, 
 from cosmos.constants import ExecutionMode, TestBehavior, LoadMode
 
 # Path configurations
-DLT_PROJECT_DIR = os.getenv("DLT_PROJECT_DIR", "/opt/airflow/dlt_pipelines")
+DLT_PROJECT_DIR = os.getenv("DLT_PROJECT_DIR", "/opt/airflow/ingestion_layer")
 DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/airflow/dbt_project")
 GCP_CREDENTIALS_PATH = "/opt/airflow/secrets/gcp_credentials.json"
 

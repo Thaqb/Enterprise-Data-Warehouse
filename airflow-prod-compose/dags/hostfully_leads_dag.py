@@ -20,7 +20,7 @@ from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig, 
 from cosmos.constants import ExecutionMode, TestBehavior, LoadMode
 
 # Path configurations
-DLT_PROJECT_DIR = os.getenv("DLT_PROJECT_DIR", "/opt/airflow/dlt_pipelines")
+DLT_PROJECT_DIR = os.getenv("DLT_PROJECT_DIR", "/opt/airflow/ingestion_layer")
 DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/airflow/dbt_project")
 GCP_CREDENTIALS_PATH = "/opt/airflow/secrets/gcp_credentials.json"
 
@@ -82,7 +82,7 @@ def hostfully_leads_dag():
     # )
     @task(task_id="dlt_extract_leads")
     def get_leads():
-        sys.path.append('/opt/airflow/dlt_pipelines')
+        sys.path.append('/opt/airflow/ingestion_layer')
         from hostfully_leads import run_leads_pipeline
         run_leads_pipeline()
     dlt_extract_leads = get_leads()
