@@ -1,4 +1,4 @@
-"""Runtime environment configuration for the Hostfully dlt pipelines.
+"""Runtime environment configuration for the Hostfully ingestion_layer.
 
 Resolves the active environment (dev/prod) from the APP_ENV variable and
 exposes the resulting destination and dataset name via PipelineConfig,

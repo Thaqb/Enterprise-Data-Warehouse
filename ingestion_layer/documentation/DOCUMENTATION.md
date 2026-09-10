@@ -301,7 +301,7 @@ Progress logging every 50 items:
 ### Running the Pipeline
 
 ```bash
-cd /home/mahmoud/dlt\ pipelines
+cd /home/mahmoud/ingestion_layer
 python hostfully_pipeline.py
 ```
 
@@ -517,7 +517,7 @@ Result:
 ## File Structure
 
 ```
-/home/mahmoud/dlt pipelines/
+/home/mahmoud/ingestion_layer/
 │
 ├── hostfully_pipeline.py              ← Main pipeline (orchestrates enrichment + messages)
 │   ├── RateLimitExceededError         ← Custom exception for fail-fast strategy
