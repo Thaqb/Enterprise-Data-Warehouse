@@ -20,7 +20,7 @@ This project uses **uv** for Python dependency and environment management.
 ### Requirements
 
 * `Python 3.12.3`
-* uv `0.1.0`
+* uv `0.1.0` 
 
 The exact Python version used by the project is defined in `.python-version`.
 
