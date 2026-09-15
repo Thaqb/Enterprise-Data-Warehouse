@@ -1,26 +1,11 @@
 # Ingestion Layer — Environment Configuration
-
-## Overview
-
-The Hostfully dlt pipelines run from the same codebase in both **development** and **production**. The active environment is selected entirely through the `APP_ENV` environment variable — no environment-selection logic lives in Python source.
-
-Supported values (case-sensitive, lowercase only):
-
-| `APP_ENV` | Destination | Dataset          |
-| --------- | ----------- | ---------------- |
-| `dev`     | `duckdb`    | `dev_hostfully`  |
-| `prod`    | `bigquery`  | `prod_hostfully` |
-
-Any other value — missing, empty, `DEV`, `PROD`, `test`, etc. — causes the pipeline to raise `ValueError` immediately. There is no fallback to `dev`.
-
 ## Installation and Setup
-
 This project uses **uv** for Python dependency and environment management.
 
 ### Requirements
 
 * `Python 3.12.3`
-* uv `0.1.0` 
+* uv >=`0.1.0` 
 
 The exact Python version used by the project is defined in `.python-version`.
 
@@ -70,6 +55,19 @@ uv pip freeze
 to display the installed packages in requirements-style format.
 
 > `uv pip list` shows the packages currently installed in the environment. The dependency source of truth for this project is `pyproject.toml`, while `uv.lock` records the exact resolved dependency versions.
+
+## Pipeline Config Overview
+
+The Hostfully dlt pipelines run from the same codebase in both **development** and **production**. The active environment is selected entirely through the `APP_ENV` environment variable — no environment-selection logic lives in Python source.
+
+Supported values (case-sensitive, lowercase only):
+
+| `APP_ENV` | Destination | Dataset          |
+| --------- | ----------- | ---------------- |
+| `dev`     | `duckdb`    | `dev_hostfully`  |
+| `prod`    | `bigquery`  | `prod_hostfully` |
+
+Any other value — missing, empty, `DEV`, `PROD`, `test`, etc. — causes the pipeline to raise `ValueError` immediately. There is no fallback to `dev`.
 
 ## Running locally (dev)
 
