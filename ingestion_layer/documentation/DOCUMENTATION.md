@@ -295,7 +295,7 @@ Progress logging every 50 items:
 
 2. **Dependencies**
    ```bash
-   pip install dlt[duckdb]>=1.20.0
+   uv sync
    ```
 
 ### Running the Pipeline
