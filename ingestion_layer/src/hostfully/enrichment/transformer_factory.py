@@ -9,9 +9,9 @@ from typing import Dict, Any
 
 import dlt
 
-from enrichment.config import EnrichmentRule
-from enrichment.state_manager import EnrichmentStateManager
-from enrichment.enrichers import (
+from hostfully.enrichment.config import EnrichmentRule
+from hostfully.enrichment.state_manager import EnrichmentStateManager
+from hostfully.enrichment.enrichers import (
     is_nested_field_incomplete,
     fetch_detail_with_retry,
     fetch_batch_details_concurrent,

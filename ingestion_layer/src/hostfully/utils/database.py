@@ -5,7 +5,7 @@ import duckdb
 from typing import Iterator, Dict, Any, List, Optional
 import dlt
 
-from config.conf_pipeline import PipelineConfig
+from hostfully.config.conf_pipeline import PipelineConfig
 
 logger = logging.getLogger(__name__)
 

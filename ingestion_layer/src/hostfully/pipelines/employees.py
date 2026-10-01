@@ -2,9 +2,9 @@
 
 import logging
 import dlt
-from config.loader import HostfullyConfig
-from config.conf_pipeline import PipelineConfig
-from hostfully_pipeline.resources.agency_employees import hostfully_rest_api_source
+from hostfully.config.loader import HostfullyConfig
+from hostfully.config.conf_pipeline import PipelineConfig
+from hostfully.resources.agency_employees import hostfully_rest_api_source
 
 # logging setup
 logger = logging.getLogger(__name__)

@@ -2,13 +2,13 @@
 
 __version__ = "2.0.0"
 
-from .resources import (
+from hostfully.resources import (
     hostfully_rest_api_source,
     threads_incremental,
     fetch_messages_for_lead,
     fetch_messages_from_thread
 )
-from .utils import (
+from hostfully.utils import (
     lead_uids_from_db,
     check_rate_limit,
     reset_api_counters,
@@ -18,6 +18,7 @@ from .utils import (
     is_first_messages_run,
     property_uids_from_db
 )
+
 
 __all__ = [
     "hostfully_rest_api_source",

@@ -10,16 +10,16 @@ Run this file directly to execute the complete leads pipeline.
 import logging
 import dlt
 import sys
-from config.loader import HostfullyConfig
-from config.conf_pipeline import PipelineConfig
-from hostfully_pipeline.resources import (
+from hostfully.config.loader import HostfullyConfig
+from hostfully.config.conf_pipeline import PipelineConfig
+from hostfully.resources import (
     hostfully_rest_api_source,
     threads_incremental,
     fetch_messages_for_lead,
     fetch_messages_from_thread,
     create_unified_transformer
 )
-from hostfully_pipeline.utils import (
+from hostfully.utils import (
     lead_uids_from_db,
     is_first_messages_run
 )

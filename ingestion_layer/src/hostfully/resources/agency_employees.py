@@ -4,7 +4,7 @@ import logging
 import dlt
 from dlt.sources.rest_api import rest_api_resources
 from dlt.sources.rest_api.typing import RESTAPIConfig
-from config import HostfullyConfig
+from hostfully.config.loader import HostfullyConfig
 
 logger = logging.getLogger(__name__)
 

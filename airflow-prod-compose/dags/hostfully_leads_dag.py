@@ -6,14 +6,13 @@ Pipeline: dlt extraction (leads, orders, transactions, messages) → dbt transfo
 Email: mahmoudmostafa@partment.co (on failure)
 
 This DAG orchestrates:
-1. Extract data from Hostfully API using dlt (hostfully_leads.py)
+1. Extract data from Hostfully API using dlt (leads.py)
 2. Transform data using dbt (tag:hourly+ includes staging and dependent marts)
 """
 
 from datetime import datetime, timedelta
 from pathlib import Path
 import os
-import sys
 from airflow.sdk import dag ,TaskGroup,task
 from airflow.providers.standard.operators.bash import BashOperator
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig, RenderConfig
@@ -74,7 +73,7 @@ def hostfully_leads_dag():
     #     bash_command=f"""
     #     set -e
     #     cd {DLT_PROJECT_DIR}
-    #     python hostfully_leads.py
+    #     python src/hostfully/pipelines/leads.py
     #     """,
     #     env={
     #         "DLT_PROJECT_DIR": DLT_PROJECT_DIR,
@@ -82,8 +81,7 @@ def hostfully_leads_dag():
     # )
     @task(task_id="dlt_extract_leads")
     def get_leads():
-        sys.path.append('/opt/airflow/ingestion_layer')
-        from hostfully_leads import run_leads_pipeline
+        from hostfully.pipelines.leads import run_leads_pipeline
         run_leads_pipeline()
     dlt_extract_leads = get_leads()
     # Task 2: Transform data using dbt (hourly staging models + downstream marts)

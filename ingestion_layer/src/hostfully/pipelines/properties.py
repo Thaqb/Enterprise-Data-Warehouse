@@ -2,13 +2,13 @@
 
 import logging
 import dlt
-from config.loader import HostfullyConfig
-from config.conf_pipeline import PipelineConfig
-from hostfully_pipeline.resources.properties import hostfully_properties_source
-from hostfully_pipeline.resources.property_calendar import property_calendar_transformer_factory
-from hostfully_pipeline.resources.property_reviews_airbnb import property_reviews_airbnb_factory
-from hostfully_pipeline.resources.property_reviews_booking import property_reviews_booking_factory
-from hostfully_pipeline.utils import property_uids_from_db as property_uids_from_db_resource
+from hostfully.config.loader import HostfullyConfig
+from hostfully.config.conf_pipeline import PipelineConfig
+from hostfully.resources.properties import hostfully_properties_source
+from hostfully.resources.property_calendar import property_calendar_transformer_factory
+from hostfully.resources.property_reviews_airbnb import property_reviews_airbnb_factory
+from hostfully.resources.property_reviews_booking import property_reviews_booking_factory
+from hostfully.utils import property_uids_from_db as property_uids_from_db_resource
 
 # logging setup
 logger = logging.getLogger(__name__)

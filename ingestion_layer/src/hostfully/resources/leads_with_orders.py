@@ -13,9 +13,9 @@ import threading
 import dlt
 import requests
 from requests.exceptions import Timeout, ConnectionError, HTTPError
-from enrichment.config import EnrichmentRule, HOSTFULLY_ENRICHMENT_CONFIG
-from enrichment.state_manager import EnrichmentStateManager
-from enrichment.enrichers import (
+from hostfully.enrichment.config import EnrichmentRule, HOSTFULLY_ENRICHMENT_CONFIG
+from hostfully.enrichment.state_manager import EnrichmentStateManager
+from hostfully.enrichment.enrichers import (
     is_nested_field_incomplete,
     fetch_detail_with_retry,
     merge_detail_into_bulk,
@@ -59,7 +59,7 @@ def create_unified_transformer():
         dlt transformer that outputs to multiple tables
     """
     # Load config inside function
-    from config import HostfullyConfig
+    from hostfully.config.loader import HostfullyConfig
     config = HostfullyConfig.from_dlt()
     base_url = config.base_url
     table_prefix = config.table_prefix
@@ -287,7 +287,7 @@ def _fetch_orders_for_lead(
             )
             # Track API call for orders
             try:
-                from hostfully_pipeline.utils.api_helpers import increment_api_counter
+                from hostfully.utils.api_helpers import increment_api_counter
                 increment_api_counter("orders")
             except Exception:
                 pass
@@ -357,7 +357,7 @@ def _fetch_transactions_for_order(order_uid: str, base_url: str, api_key: str) -
 
     # Import increment helper to count API calls
     try:
-        from hostfully_pipeline.utils.api_helpers import increment_api_counter
+        from hostfully.utils.api_helpers import increment_api_counter
     except Exception:
         increment_api_counter = None
 

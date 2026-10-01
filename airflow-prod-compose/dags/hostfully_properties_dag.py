@@ -6,7 +6,7 @@ Pipeline: dlt extraction (properties, calendar, reviews) → dbt transformation 
 Email: mahmoudmostafa@partment.co (on failure)
 
 This DAG orchestrates:
-1. Extract data from Hostfully API using dlt (hostfully_properties.py)
+1. Extract data from Hostfully API using dlt (properties.py)
 2. Transform data using dbt (tag:daily+ includes staging and dependent marts)
 3. Run dbt snapshots (snp_fct_bookings, snp_fct_pricing, snp_dim_properties, snp_hostfully__promo_codes)
 """
@@ -77,10 +77,12 @@ def hostfully_properties_dag():
         bash_command=f"""
         set -e
         cd {DLT_PROJECT_DIR}
-        python hostfully_properties.py
+        python src/hostfully/pipelines/properties.py
         """,
+        append_env=True,
         env={
             "DLT_PROJECT_DIR": DLT_PROJECT_DIR,
+            "PYTHONPATH": f"{DLT_PROJECT_DIR}/src",
         },
     )
     

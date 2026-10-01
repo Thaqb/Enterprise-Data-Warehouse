@@ -5,7 +5,7 @@ import threading
 import requests
 import dlt
 from datetime import date, datetime
-from config import HostfullyConfig
+from hostfully.config.loader import HostfullyConfig
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ Pipeline: dlt extraction (agencies, employees, owners, promo_codes) → dbt tran
 Email: mahmoudmostafa@partment.co (on failure)
 
 This DAG orchestrates:
-1. Extract data from Hostfully API using dlt (hostfully_empolyees.py)
+1. Extract data from Hostfully API using dlt (employees.py)
 2. Transform data using dbt (tag:biweekly+ includes staging and dependent marts)
 """
 
@@ -75,10 +75,12 @@ def hostfully_employees_dag():
         bash_command=f"""
         set -e
         cd {DLT_PROJECT_DIR}
-        python hostfully_empolyees.py
+        python src/hostfully/pipelines/employees.py
         """,
+        append_env=True,
         env={
             "DLT_PROJECT_DIR": DLT_PROJECT_DIR,
+            "PYTHONPATH": f"{DLT_PROJECT_DIR}/src",
         },
     )
     

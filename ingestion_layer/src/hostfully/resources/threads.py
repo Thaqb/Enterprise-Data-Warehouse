@@ -4,9 +4,9 @@ import logging
 import dlt
 import requests
 from typing import Iterator, Dict, Any
-from config import HostfullyConfig
-from enrichment.enrichers import RateLimitError
-from ..utils import (
+from hostfully.config.loader import HostfullyConfig
+from hostfully.enrichment.enrichers import RateLimitError
+from hostfully.utils.api_helpers import (
     _get_session,
     increment_api_counter
 )

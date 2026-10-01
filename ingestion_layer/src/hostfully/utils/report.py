@@ -2,10 +2,10 @@
 
 import logging
 import duckdb
-from .api_helpers import API_CALL_COUNTERS
+from hostfully.utils.api_helpers import API_CALL_COUNTERS
 import dlt
-from enrichment.config import EnrichmentRule
-from enrichment.state_manager import EnrichmentStateManager
+from hostfully.enrichment.config import EnrichmentRule
+from hostfully.enrichment.state_manager import EnrichmentStateManager
 logger = logging.getLogger(__name__)
 
 def calculate_total_execution_time(start_time: float, end_time: float) -> float:

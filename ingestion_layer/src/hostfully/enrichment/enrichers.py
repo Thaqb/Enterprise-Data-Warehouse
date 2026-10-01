@@ -12,8 +12,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import dlt
 import requests
 from requests.exceptions import Timeout, ConnectionError, HTTPError
-from enrichment.config import EnrichmentRule
-from config import HostfullyConfig
+from hostfully.enrichment.config import EnrichmentRule
+from hostfully.config.loader import HostfullyConfig
 
 
 class RateLimitError(Exception):
@@ -27,7 +27,7 @@ class RateLimitError(Exception):
 
 # Import API counter from hostfully_pipeline if available
 try:
-    from hostfully_pipeline.utils import increment_api_counter
+    from hostfully.utils.api_helpers import increment_api_counter
     _counter_available = True
 except ImportError:
     _counter_available = False
