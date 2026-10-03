@@ -102,7 +102,7 @@ echo $APP_ENV
 After setting up the environment and installing dependencies, run the pipeline with:
 
 ```bash
-uv run python hostfully_leads.py
+uv run python -m hostfully.pipelines.leads
 ```
 
 Using `uv run` ensures that the command runs with the project's managed environment and dependencies.
