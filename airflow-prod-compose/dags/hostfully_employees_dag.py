@@ -75,12 +75,11 @@ def hostfully_employees_dag():
         bash_command=f"""
         set -e
         cd {DLT_PROJECT_DIR}
-        python src/hostfully/pipelines/employees.py
+        {DLT_PROJECT_DIR}/.venv/bin/python src/hostfully/pipelines/employees.py
         """,
         append_env=True,
         env={
             "DLT_PROJECT_DIR": DLT_PROJECT_DIR,
-            "PYTHONPATH": f"{DLT_PROJECT_DIR}/src",
         },
     )
     

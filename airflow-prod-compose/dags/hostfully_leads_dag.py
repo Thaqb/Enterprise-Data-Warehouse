@@ -67,23 +67,25 @@ def hostfully_leads_dag():
     Runs hourly to keep booking/order/transaction data fresh.
     """
     
-    # Task 1: Extract data using dlt (dlt is installed in Airflow container)
-    # dlt_extract_leads = BashOperator(
-    #     task_id="dlt_extract_leads",
-    #     bash_command=f"""
-    #     set -e
-    #     cd {DLT_PROJECT_DIR}
-    #     python src/hostfully/pipelines/leads.py
-    #     """,
-    #     env={
-    #         "DLT_PROJECT_DIR": DLT_PROJECT_DIR,
-    #     },
-    # )
-    @task(task_id="dlt_extract_leads")
-    def get_leads():
-        from hostfully.pipelines.leads import run_leads_pipeline
-        run_leads_pipeline()
-    dlt_extract_leads = get_leads()
+    # Task 1: Extract data using dlt, run with the project's own uv venv
+    dlt_extract_leads = BashOperator(
+        task_id="dlt_extract_leads",
+        bash_command=f"""
+        set -e
+        cd {DLT_PROJECT_DIR}
+        {DLT_PROJECT_DIR}/.venv/bin/python src/hostfully/pipelines/leads.py
+        """,
+        append_env=True,
+        env={
+            "DLT_PROJECT_DIR": DLT_PROJECT_DIR,
+        },
+    )
+    # Previous in-process version (needs hostfully importable via PYTHONPATH):
+    # @task(task_id="dlt_extract_leads")
+    # def get_leads():
+    #     from hostfully.pipelines.leads import run_leads_pipeline
+    #     run_leads_pipeline()
+    # dlt_extract_leads = get_leads()
     # Task 2: Transform data using dbt (hourly staging models + downstream marts)
     dbt_transform_hourly = DbtTaskGroup(
         group_id="dbt_transform_hourly",
