@@ -18,10 +18,16 @@ from airflow.providers.standard.operators.bash import BashOperator
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig, RenderConfig
 from cosmos.constants import ExecutionMode, TestBehavior, LoadMode
 
+# Environment: dev (local DuckDB) or prod (BigQuery).
+APP_ENV = os.environ["APP_ENV"]
+
 # Path configurations
 DLT_PROJECT_DIR = os.getenv("DLT_PROJECT_DIR", "/opt/airflow/ingestion_layer")
 DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/airflow/dbt_project")
 GCP_CREDENTIALS_PATH = "/opt/airflow/secrets/gcp_credentials.json"
+
+# dev: use the container's python. prod: use the ingestion_layer .venv (unchanged).
+DLT_PYTHON = "python" if APP_ENV == "dev" else f"{DLT_PROJECT_DIR}/.venv/bin/python"
 
 # Email configuration
 NOTIFICATION_EMAIL = "mahmoudmostafa@partment.co"
@@ -37,10 +43,10 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-# dbt profile configuration - use profiles.yml directly from dbt project
+# dbt profile configuration - target comes from APP_ENV
 profile_config = ProfileConfig(
     profile_name="hostfully",
-    target_name="prod",
+    target_name=APP_ENV,
     profiles_yml_filepath=f"{DBT_PROJECT_DIR}/profiles.yml",
 )
 
@@ -67,13 +73,13 @@ def hostfully_leads_dag():
     Runs hourly to keep booking/order/transaction data fresh.
     """
     
-    # Task 1: Extract data using dlt, run with the project's own uv venv
+    # Task 1: Extract data using dlt
     dlt_extract_leads = BashOperator(
         task_id="dlt_extract_leads",
         bash_command=f"""
         set -e
         cd {DLT_PROJECT_DIR}
-        {DLT_PROJECT_DIR}/.venv/bin/python src/hostfully/pipelines/leads.py
+        {DLT_PYTHON} src/hostfully/pipelines/leads.py
         """,
         append_env=True,
         env={

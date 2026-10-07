@@ -2,8 +2,8 @@ version: 2
 
 sources:
   - name: hostfully_api
-    database: cloud-data-pipeline-projects
-    schema: prod_hostfully
+    database: "{{ 'cloud-data-pipeline-projects' if target.name == 'prod' else target.database }}"
+    schema: "{{ target.name }}_hostfully"
     description: "Hostfully API data ingested via dlt pipeline"
     
     tables:

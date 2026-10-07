@@ -55,3 +55,18 @@ logs/
 .mcp.json
 airflow-prod-compose/.vscode/
 .claude/
+
+# =========================
+# Local-only dev setup (DuckDB)
+# =========================
+
+airflow-prod-compose/Dockerfile.local
+airflow-prod-compose/docker-compose.override.yaml
+
+# =========================
+# dbt generated files
+# =========================
+
+dbt/dbt_hostfully/target/
+dbt/dbt_hostfully/dbt_packages/
+dbt/dbt_hostfully/logs/

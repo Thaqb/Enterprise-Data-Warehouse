@@ -22,10 +22,16 @@ from airflow.utils.task_group import TaskGroup
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig, RenderConfig
 from cosmos.constants import ExecutionMode, TestBehavior, LoadMode
 
+# Environment: dev (local DuckDB) or prod (BigQuery).
+APP_ENV = os.environ["APP_ENV"]
+
 # Path configurations
 DLT_PROJECT_DIR = os.getenv("DLT_PROJECT_DIR", "/opt/airflow/ingestion_layer")
 DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/airflow/dbt_project")
 GCP_CREDENTIALS_PATH = "/opt/airflow/secrets/gcp_credentials.json"
+
+# dev: use the container's python. prod: use the ingestion_layer .venv (unchanged).
+DLT_PYTHON = "python" if APP_ENV == "dev" else f"{DLT_PROJECT_DIR}/.venv/bin/python"
 
 # Email configuration
 NOTIFICATION_EMAIL = "mahmoudmostafa@partment.co"
@@ -41,10 +47,10 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-# dbt profile configuration - use profiles.yml directly from dbt project
+# dbt profile configuration - target comes from APP_ENV
 profile_config = ProfileConfig(
     profile_name="hostfully",
-    target_name="prod",
+    target_name=APP_ENV,
     profiles_yml_filepath=f"{DBT_PROJECT_DIR}/profiles.yml",
 )
 
@@ -66,25 +72,25 @@ execution_config = ExecutionConfig(
 def hostfully_properties_dag():
     """
     Hostfully Properties Pipeline DAG
-    
+
     Runs daily at 7 AM UTC to sync property data, calendar, and reviews.
     Also runs dbt snapshots to capture slowly changing dimensions.
     """
-    
-    # Task 1: Extract data using dlt (dlt is installed in Airflow container)
+
+    # Task 1: Extract data using dlt
     dlt_extract_properties = BashOperator(
         task_id="dlt_extract_properties",
         bash_command=f"""
         set -e
         cd {DLT_PROJECT_DIR}
-        {DLT_PROJECT_DIR}/.venv/bin/python src/hostfully/pipelines/properties.py
+        {DLT_PYTHON} src/hostfully/pipelines/properties.py
         """,
         append_env=True,
         env={
             "DLT_PROJECT_DIR": DLT_PROJECT_DIR,
         },
     )
-    
+
     # Task 2: Transform data using dbt (daily staging models + downstream marts)
     dbt_transform_daily = DbtTaskGroup(
         group_id="dbt_transform_daily",
@@ -105,7 +111,7 @@ def hostfully_properties_dag():
             "retry_delay": timedelta(minutes=3),
         },
     )
-    
+
     # Task 3: Run dbt snapshots (dbt is installed in Airflow container)
     # Snapshots: snp_fct_bookings, snp_fct_pricing, snp_dim_properties, snp_hostfully__promo_codes
     # dbt_run_snapshots = BashOperator(
@@ -120,7 +126,7 @@ def hostfully_properties_dag():
     #         "GOOGLE_APPLICATION_CREDENTIALS": GCP_CREDENTIALS_PATH,
     #     },
     # )
-    
+
     # Define task dependencies
     dlt_extract_properties >> dbt_transform_daily
 
